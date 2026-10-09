@@ -3,7 +3,7 @@
    startApp 可注入测试依赖；boot 启用真实登录检查。 */
 import { detectBase, el } from './assets/js/util.js?v=20261009-navigation-controls';
 import { loadSite, loadArticles } from './assets/js/content.js';
-import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261009-navigation-controls';
+import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261009-module-cards-v2';
 import { initTheme } from './assets/js/theme.js';
 import {restoreSession} from './assets/js/auth.js?v=20261009-delete-review';
 import {renderLogin,safeNext} from './js/login.js';
@@ -23,8 +23,8 @@ const ROUTES = [
 const LOADERS = {
   workspace:()=>import('./js/workspace.js?v=20261009-navigation-controls').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
-  home: () => import('./js/home.js').then((mod) => mod.renderHome),
-  modules: () => import('./js/modules.js').then((mod) => mod.renderModules),
+  home: () => import('./js/home.js?v=20261009-module-cards-v2').then((mod) => mod.renderHome),
+  modules: () => import('./js/modules.js?v=20261009-module-cards-v2').then((mod) => mod.renderModules),
   module: () => import('./js/module.js').then((mod) => mod.renderModule),
   articles: () => import('./js/articles.js').then((mod) => mod.renderArticles),
   article: () => import('./js/article.js?v=20261009-comments').then((mod) => mod.renderArticle),
@@ -172,15 +172,13 @@ export async function startApp(deps = {}) {
 }
 
 async function boot() {
-  /* 站点根路径统一由 detectBase() 推导（只看 location.pathname）。
-     不要用 new URL('./', import.meta.url).pathname：它依赖模块被加载时的 URL，
-     带查询串或换加载方式时结果会变，而且会把错误的根路径写进 window.__OSC_BASE__。 */
-  window.__OSC_BASE__=detectBase();
+  // The entry module stays at the site root, including when a nested page is opened.
+  window.__OSC_BASE__=new URL('./',import.meta.url).pathname;
   if(location.hash.startsWith('#/')){const r=parseHash(location.hash);location.replace(r.path.replace(/\/$/,'')+'/'+(r.params.size?'?'+r.params:''));return;}
   await startApp({requireAuth:true});
 }
 
-boot().catch((error) => {
+if (/^https?:$/.test(new URL(import.meta.url).protocol)) boot().catch((error) => {
   console.error('[app] 启动失败：', error);
   const box = el('div', { class: 'wrap' }, [
     el('div', { class: 'empty' }, [

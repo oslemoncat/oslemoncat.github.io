@@ -1,7 +1,7 @@
 /* 知识模块总览页。 */
 import { el } from '../assets/js/util.js';
 import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js';
-import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js';
+import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js?v=20261009-module-cards-v2';
 
 export async function renderModules(container) {
   const [modules, articles] = await Promise.all([loadModules(), loadArticles()]);
@@ -18,7 +18,7 @@ export async function renderModules(container) {
     ));
   } else {
     wrap.appendChild(el('section', { class: 'section' }, [
-      el('div', { class: 'grid grid--wide' }, decorated.map((m,i)=>moduleCard(m,i))),
+      el('div', { class: 'grid grid--wide module-grid' }, decorated.map((m,i)=>moduleCard(m,i))),
     ]));
   }
 

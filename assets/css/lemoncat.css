@@ -47,3 +47,16 @@ html[data-theme=dark] .article-comments .comment-button.danger{color:#efaea2;bor
 @media(max-width:600px){.comments-head h2{font-size:23px}.article-comments{margin-top:28px;padding-top:22px}.comment-header{flex-wrap:wrap;gap:8px}.comment-actions{margin-left:0;flex-basis:100%;padding-left:0}.comment-form-footer .field-hint{flex-basis:100%}.comment-form-footer .comment-button{margin-left:auto}.comment-meta{flex:1}.comment-body{font-size:14px}.article-comments .comment-button{min-width:72px;padding:8px 13px}}
 
 .article-comments [hidden]{display:none!important}
+
+/* Knowledge modules: a visible frame and one native link covering each card. */
+.module-grid{gap:16px 24px}
+.card--module{border:1px solid var(--border-strong);border-radius:12px;background:var(--bg-elevated);padding:20px 18px;cursor:pointer;transition:background-color .16s,border-color .16s}
+.card--module .module-copy{min-width:0}
+.card--module .card__title{overflow-wrap:anywhere}
+.card--module .module-card__link:hover{text-decoration:none}
+.card--module .module-card__link::after{border-radius:inherit;touch-action:manipulation}
+.card--module:hover,.card--module:has(.module-card__link:focus-visible){background:var(--accent-soft);border-color:var(--accent)}
+.card--module:has(.module-card__link:focus-visible){outline:3px solid #ddc453;outline-offset:3px}
+.card--module:active{background:var(--bg-sunken);border-color:var(--accent)}
+@media(max-width:760px){.module-grid{gap:12px}.card--module{padding:16px 14px;grid-template-columns:38px minmax(0,1fr);gap:4px 12px}.card--module .module-number{grid-row:1/span 2}.card--module .card__title{font-size:18px}.card--module .module-count{grid-column:2;align-self:auto;justify-self:start;padding-top:0}}
+@media(max-width:360px){.card--module{padding:14px 12px;grid-template-columns:32px minmax(0,1fr);column-gap:10px}.card--module .module-count{display:block;font-size:11px}}
