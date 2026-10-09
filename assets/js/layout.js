@@ -85,7 +85,9 @@ export function tagList(tags = []) {
 }
 
 /* ------------------------------------------------------------ 模块卡片 */
-export function moduleCard(module,index=0){return el('article',{class:'card card--module'},[el('span',{class:'module-number',text:String(index+1).padStart(2,'0')}),el('div',{class:'module-copy'},[el('h3',{class:'card__title'},[el('a',{href:`#/module/${module.slug}`,text:module.title})]),el('p',{class:'card__desc',text:module.subtitle||module.description})]),el('span',{class:'module-count',text:`${module.count??0} 篇文章`})]);}
+/* 链接带 module-card__link 类：CSS 用它把点击区域铺满整张卡片（stretched link），
+   因此整块区域可点，而不是只有标题文字。 */
+export function moduleCard(module,index=0){return el('article',{class:'card card--module'},[el('span',{class:'module-number',text:String(index+1).padStart(2,'0')}),el('div',{class:'module-copy'},[el('h3',{class:'card__title'},[el('a',{class:'module-card__link',href:`#/module/${module.slug}`,text:module.title})]),el('p',{class:'card__desc',text:module.subtitle||module.description})]),el('span',{class:'module-count',text:`${module.count??0} 篇文章`})]);}
 /* ------------------------------------------------------------ 文章卡片 */
 export function articleCard(article, base) {
   const cover = article.cover

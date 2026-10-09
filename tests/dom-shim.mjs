@@ -77,6 +77,34 @@ export class DomNode {
     this.childNodes.push(child);
     return child;
   }
+  /* 现代 DOM 的 append：可一次追加多个节点或字符串（页面代码大量使用） */
+  append(...nodes) {
+    nodes.forEach((node) => {
+      if (node === null || node === undefined) return;
+      this.appendChild(typeof node === 'string' ? new TextNode(node) : node);
+    });
+  }
+  prepend(...nodes) {
+    nodes.slice().reverse().forEach((node) => {
+      if (node === null || node === undefined) return;
+      this.insertBefore(typeof node === 'string' ? new TextNode(node) : node, this.firstChild);
+    });
+  }
+  before(...nodes) {
+    if (!this.parentNode) return;
+    nodes.forEach((node) => this.parentNode.insertBefore(node, this));
+  }
+  after(...nodes) {
+    if (!this.parentNode) return;
+    const next = this.nextSibling;
+    nodes.forEach((node) => this.parentNode.insertBefore(node, next));
+  }
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const index = this.parentNode.childNodes.indexOf(this);
+    return this.parentNode.childNodes[index + 1] || null;
+  }
+  get lastChild() { return this.childNodes[this.childNodes.length - 1] || null; }
   insertBefore(child, ref) {
     const index = ref ? this.childNodes.indexOf(ref) : -1;
     if (index < 0) return this.appendChild(child);
@@ -101,6 +129,15 @@ export class DomNode {
       parent.childNodes.splice(index + offset, 0, node);
     });
     this.parentNode = null;
+  }
+  /* 新版页面模块用 replaceChildren 清空并填充容器（比 innerHTML='' 更常用），
+     shim 早期版本没有实现，会让渲染测试误报 container.replaceChildren is not a function */
+  replaceChildren(...nodes) {
+    this.childNodes.slice().forEach((child) => this.removeChild(child));
+    nodes.forEach((node) => {
+      if (node === null || node === undefined) return;
+      this.appendChild(typeof node === 'string' ? new TextNode(node) : node);
+    });
   }
   remove() { if (this.parentNode) this.parentNode.removeChild(this); }
 

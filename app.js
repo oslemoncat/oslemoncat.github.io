@@ -172,7 +172,10 @@ export async function startApp(deps = {}) {
 }
 
 async function boot() {
-  window.__OSC_BASE__=new URL('./',import.meta.url).pathname;
+  /* 站点根路径统一由 detectBase() 推导（只看 location.pathname）。
+     不要用 new URL('./', import.meta.url).pathname：它依赖模块被加载时的 URL，
+     带查询串或换加载方式时结果会变，而且会把错误的根路径写进 window.__OSC_BASE__。 */
+  window.__OSC_BASE__=detectBase();
   if(location.hash.startsWith('#/')){const r=parseHash(location.hash);location.replace(r.path.replace(/\/$/,'')+'/'+(r.params.size?'?'+r.params:''));return;}
   await startApp({requireAuth:true});
 }
