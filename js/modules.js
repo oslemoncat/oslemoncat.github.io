@@ -1,7 +1,7 @@
 /* 知识模块总览页。 */
 import { el } from '../assets/js/util.js';
 import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js';
-import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js?v=20261009-module-cards-v2';
+import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js?v=20261009-module-cards-v3';
 
 export async function renderModules(container) {
   const [modules, articles] = await Promise.all([loadModules(), loadArticles()]);

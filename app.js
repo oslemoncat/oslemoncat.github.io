@@ -1,9 +1,9 @@
 /* 应用入口：独立路径路由、统一登录、页头页脚和页面分发。
    构建为模块、文章、登录与写作区生成对应 HTML。旧 #/ 链接会跳到新路径。
    startApp 可注入测试依赖；boot 启用真实登录检查。 */
-import { detectBase, el } from './assets/js/util.js?v=20261009-navigation-controls';
+import { el } from './assets/js/util.js?v=20261009-navigation-controls';
 import { loadSite, loadArticles } from './assets/js/content.js';
-import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261009-module-cards-v2';
+import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261009-module-cards-v3';
 import { initTheme } from './assets/js/theme.js';
 import {restoreSession} from './assets/js/auth.js?v=20261009-delete-review';
 import {renderLogin,safeNext} from './js/login.js';
@@ -23,8 +23,8 @@ const ROUTES = [
 const LOADERS = {
   workspace:()=>import('./js/workspace.js?v=20261009-navigation-controls').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
-  home: () => import('./js/home.js?v=20261009-module-cards-v2').then((mod) => mod.renderHome),
-  modules: () => import('./js/modules.js?v=20261009-module-cards-v2').then((mod) => mod.renderModules),
+  home: () => import('./js/home.js?v=20261009-module-cards-v3').then((mod) => mod.renderHome),
+  modules: () => import('./js/modules.js?v=20261009-module-cards-v3').then((mod) => mod.renderModules),
   module: () => import('./js/module.js').then((mod) => mod.renderModule),
   articles: () => import('./js/articles.js').then((mod) => mod.renderArticles),
   article: () => import('./js/article.js?v=20261009-comments').then((mod) => mod.renderArticle),

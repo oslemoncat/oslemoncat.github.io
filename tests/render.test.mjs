@@ -111,11 +111,7 @@ check('每张模块卡片恰好一个链接', homeCards.length === homeCardLinks
   `卡片 ${homeCards.length} / 链接 ${homeCardLinks.length}`);
 check('模块卡链接指向模块详情', [...homeCardLinks].every((a) => /^\/module\/[^/]+\/$/.test(a.getAttribute('href') || '')),
   [...homeCardLinks].map((a) => a.getAttribute('href')).join(', '));
-{
-  const css = readFileSync(join(ROOT, 'assets', 'css', 'lemoncat.css'), 'utf8');
-  check('卡片容器是定位上下文', css.includes('.card--module{position:relative}'));
-  check('链接用伪元素铺满卡片', /\.module-card__link::after\{[^}]*position:absolute[^}]*inset:0/.test(css));
-}
+/* Actual card hit targets, focus and responsive styles are verified in the isolated browser. */
 check('页头已挂载', Boolean(document.querySelector('.site-header') || document.getElementById('site-header')));
 check('页脚已挂载', document.querySelectorAll('.site-footer').length > 0);
 
