@@ -12,6 +12,7 @@ draft: false
 images: []
 attachments: []
 author: "LJH1011-07"
+author_id: "github:330442261"
 ---
 # TypeScript 基础学习笔记
 
