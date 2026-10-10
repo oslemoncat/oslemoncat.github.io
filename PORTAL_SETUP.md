@@ -1,3 +1,5 @@
+> 2026-10-10：预审、审核确认、上线进度和日期锁定见 [PUBLICATION_PREVIEW_SETUP.md](PUBLICATION_PREVIEW_SETUP.md)。需更新 Worker 和现有内容服务授权。
+
 # 喵喵屋统一登录与投稿审核
 
 新版网站只有一个登录入口：`https://oslemoncat.github.io/login/`。所有人用自己的 GitHub 账号登录，不需要另外设置本站密码。登录后进入首页；右上角头像和“写一篇文章”打开同一个写作区。
@@ -12,13 +14,59 @@
 
 `/health` 显示 `ok` 只说明 Worker 可访问。新版 `/api/session` 在 Origin 为 `https://oslemoncat.github.io` 且没有令牌时应返回 JSON 的 401“请先登录”；旧版会返回 404。
 
+## 从本机发布（git push 不可用时）
+
+这台机器到 `github.com:443` 的网络被阻断（`git push` 报 `Failed to connect to github.com:443` 或
+`schannel: SEC_E_NO_CREDENTIALS`），但 `api.github.com` 可达。因此可以在本机用 REST API 提交：
+
+```powershell
+# 1) 把 GitHub 令牌写入 .token-for-dsh.txt（已被 .gitignore 忽略）
+#    双击 1-PASTE-TOKEN.cmd 粘贴即可
+# 2) 预演（只读，不写入）
+node scripts/release-via-api.mjs --dry-run
+# 3) 正式发布：上传 blob → 基于远端 tree 建新 tree → 快进提交 → 更新 main
+node scripts/release-via-api.mjs
+# 4) 确认线上已生效
+node scripts/verify-release.mjs
+```
+
+要点：
+
+- `release-via-api.mjs` 里 `FILES` 数组列出本次要发布的文件；它用 `base_tree` 只覆盖这些文件，
+  **不会删除远端其它内容**。发布前先跑 `--dry-run`，并用
+  `git status` 或本文档的差异审查方式确认不会覆盖别人的改动。
+- 更新分支用 `PATCH /repos/{owner}/{repo}/git/refs/heads/main`（复数 refs），`sha` 必须是**完整 40 位**。
+- **不要调用 `POST /pages/builds`**：Pages 来源是 GitHub Actions 时该接口返回
+  403「The repository does not have a GitHub Pages site」——push 到 `main` 已自动触发
+  `Publish website and admin` 工作流，无需也不能手动请求构建。
+- 发布后删除 `.token-for-dsh.txt`；提交记录里的提交信息会写明本次改了什么。
+- 通过 API 写入 `.github/workflows/` 下的文件需要令牌带 `workflow` 权限，只有 `repo` 时会返回
+  **误导性的 404**。本流程不涉及工作流文件。
+
+### 发布后本地与远端的分叉（重要）
+
+API 发布会在 GitHub 上直接创建提交，而本机 `git fetch` 走不通（`github.com:443` 被阻断），
+**本地拿不到那个提交对象**，于是 `git status` 会显示这些文件的改动仍未提交——即使它们已经上线。
+
+处理办法：
+
+```powershell
+# 在能访问 github.com 的网络下（例如手机热点）
+git fetch origin
+git reset --soft origin/main     # 只移动指针，工作区文件不动
+git status                       # 此时应显示干净
+```
+
+在 fetch 可用之前，**不要**在这些文件上做「还原/checkout」，也不要以为它们没上线而重复修改。
+本次发布后本地已建 `backup/before-api-release` 分支，可回退到发布前的本地状态。
+
 ## 用户与管理员
 
 普通用户：写正文、选择知识模块、添加图片或附件、预览正文、提交审核。待审核稿件可继续修改。普通用户不能直接发布文章；可以撤回自己的待审稿件，并在后台内容授权配置后删除自己的已发布文章。
 
 管理员：编辑与发布文章、查看所有投稿、审核通过发布、退回投稿、删除已发布文章。身份由 Worker 每次向 GitHub 验证；必须同时位于 `ALLOWED_GITHUB_LOGIN` 名单中并拥有本站仓库写入权限。以后增加管理员可用逗号分隔名单，并在 GitHub 授予相应仓库权限；普通投稿用户无需加入名单。
 
-普通用户提交时，服务用该用户的授权在其 GitHub 账号内创建本站的 fork 和投稿分支，然后建立 Pull Request。审核通过后才合并到本站 `main`，触发网站部署。首次建立 fork 可能需要稍等后重试。
+普通用户提交时，已配置内容服务授权则保存到本仓库的预审分支，建立待审 Pull Request；未配置时保留原 fork 路径。审核通过后，文章和作者记录一次写入主分支，触发网站部署。
 
 审核页显示正文、图片、附件及修改文件清单。发布前检查指定稿件对应的网页构建运行及成功的 `build` 作业，并锁定审核时的提交版本；若用户修改了稿件，需要重新打开审核。首次外部投稿可能需要管理员在 GitHub Actions 批准运行检查；页面会提示检查未通过，此时不会发布。
 

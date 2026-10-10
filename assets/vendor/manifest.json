@@ -1,0 +1,49 @@
+{
+  "pdfjs": "6.4.299",
+  "mammoth": "1.13.0",
+  "sheetjs": "0.20.3",
+  "files": [
+    {
+      "name": "pdf.mjs",
+      "url": "https://unpkg.com/pdfjs-dist@6.4.299/build/pdf.mjs",
+      "bytes": 860818,
+      "sha256": "dd13af821c9c3e1778653340d6539a1ba07bc56cba40073a4c727864cf0c232a"
+    },
+    {
+      "name": "pdf.worker.mjs",
+      "url": "https://unpkg.com/pdfjs-dist@6.4.299/build/pdf.worker.mjs",
+      "bytes": 2229713,
+      "sha256": "07ceb740d746e5d9012fcf9f27d5c7dea09f7d2f5e74f5c8109e5787551a2333"
+    },
+    {
+      "name": "pdf-LICENSE.txt",
+      "url": "https://unpkg.com/pdfjs-dist@6.4.299/LICENSE",
+      "bytes": 10174,
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "name": "mammoth.browser.js",
+      "url": "https://unpkg.com/mammoth@1.13.0/mammoth.browser.js",
+      "bytes": 598457,
+      "sha256": "ce90d8f7d6a558bd5d358b32d06af5571daf04ac4e9841523ac9c0cd24c9ab61"
+    },
+    {
+      "name": "mammoth-LICENSE.txt",
+      "url": "https://unpkg.com/mammoth@1.13.0/LICENSE",
+      "bytes": 1307,
+      "sha256": "6663bbd049205d38a496ccacb412a151980b444627d38de218b3b809aef330f1"
+    },
+    {
+      "name": "xlsx.full.min.js",
+      "url": "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
+      "bytes": 951904,
+      "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
+    },
+    {
+      "name": "sheetjs-LICENSE.txt",
+      "url": "https://cdn.sheetjs.com/xlsx-0.20.3/package/LICENSE",
+      "bytes": 11355,
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    }
+  ]
+}

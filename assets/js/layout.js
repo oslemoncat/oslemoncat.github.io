@@ -1,6 +1,6 @@
 /* 布局与共享组件：页头、页脚、卡片、列表、分页、面包屑。 */
-import { el, formatDate, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261009-navigation-controls';
-import { icon } from './theme.js';
+import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261010-publication-preview';
+import { icon } from './theme.js?v=20261010-publication-preview';
 
 /* ------------------------------------------------------------------ 页头 */
 export function renderHeader(site, activeSection = '', user = null) {
@@ -101,7 +101,7 @@ export function articleCard(article, base) {
     article.summary ? el('p', { class: 'card__desc', text: article.summary }) : null,
     el('div', { class: 'card__meta' }, [
       el('a', { class: 'tag tag--accent', href: `#/module/${article.module}`, text: article.moduleTitle }),
-      article.date ? el('span', { text: formatDate(latestDate(article)) }) : null,
+      article.date ? el('span', { text: formatTimestamp(article.uploadedAt||article.publishedAt||article.date) }) : null,
     ]),
     cover,
   ]);
@@ -112,7 +112,7 @@ export function articleList(articles) {
   const list = el('div', { class: 'list' });
   for (const article of articles) {
     list.appendChild(el('a', { class: 'list__item', href: `#/article/${article.slug}` }, [
-      el('span', { class: 'list__date', text: latestDate(article) || '—' }),
+      el('span', { class: 'list__date', text: formatTimestamp(article.uploadedAt||article.publishedAt||article.date) || '—' }),
       el('span', { class: 'list__body' }, [
         el('span', { class: 'list__title', text: article.title }),
         article.summary ? el('span', { class: 'list__summary', text: article.summary }) : null,

@@ -13,6 +13,8 @@ cover: assets/images/c-pointers-essentials/cover.svg
 order: 10
 slug: c-pointers-essentials
 draft: false
+uploaded_at: "2026-10-08T13:59:55Z"
+published_at: "2026-10-08T13:59:55Z"
 ---
 # 指针就是「地址 + 类型」
 

@@ -13,6 +13,8 @@ images: []
 attachments: []
 author: "LJH1011-07"
 author_id: "github:330442261"
+uploaded_at: "2026-10-10T13:51:47Z"
+published_at: "2026-10-10T13:51:47Z"
 ---
 # TypeScript 基础学习笔记
 

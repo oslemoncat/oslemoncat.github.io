@@ -17,9 +17,10 @@ function fixture(options={}){
   calls.push({p,m,body,headers:input.headers});
   if(p==='/user')return Response.json({login:name,id:options.admin?11:uid});
   if(p==='/repos/'+env.REPOSITORY)return Response.json({private:false,full_name:env.REPOSITORY,permissions:{push:!!options.admin}});
+  if(p.endsWith('/contents/content/publications.json'))return Response.json({message:'not found'},{status:404});
   if(p.endsWith('/contents/content/ownership.json'))return options.malformed?Response.json({content:encode({version:0,articles:{}})}):Response.json({content:encode(registry)});
   if(p.includes('/contents/content/posts/')){
-   if(p.startsWith('/repos/'+env.REPOSITORY+'/')&&u.searchParams.get('ref')==='main'&&!options.mainExists&&p.endsWith('own-note.md')&&m==='GET')return Response.json({message:'not found'},{status:404});
+   if(p.startsWith('/repos/'+env.REPOSITORY+'/')&&['main','main-parent'].includes(u.searchParams.get('ref'))&&!options.mainExists&&p.endsWith('own-note.md')&&m==='GET')return Response.json({message:'not found'},{status:404});
    if(m==='DELETE')return Response.json({commit:{sha:'deleted-sha'}});
    return Response.json({sha:'current-file-sha',content:encode(source)});
   }
@@ -81,7 +82,7 @@ test('Successful build on another head or workflow cannot authorize this publica
  for(const options of [{wrongHead:true},{wrongWorkflow:true},{failedJob:true}]){const f=fixture({admin:true,...options});const r=await handleRequest(request('/api/submissions/2/review','POST',{action:'publish',sha:head}),env,f.gh);assert.equal(r.status,409);assert.ok(!f.calls.some(x=>x.p.endsWith('/merge')));}
 });
 test('Successful PR workflow binds its head but can test the GitHub merge revision',async()=>{
- const f=fixture({admin:true,owners:{}});const r=await handleRequest(request('/api/submissions/2/review','POST',{action:'publish',sha:head}),env,f.gh);assert.equal(r.status,200);assert.equal(f.calls.find(x=>x.p.endsWith('/merge')).body.sha,head);assert.ok(!f.calls.some(x=>x.p.endsWith('/check-runs')));
+ const f=fixture({admin:true,owners:{}});const r=await handleRequest(request('/api/submissions/2/review','POST',{action:'publish',sha:head}),env,f.gh);assert.equal(r.status,200);assert.equal((await r.json()).publication.reviewedSha,head);assert.equal(f.calls.filter(x=>x.m==='PATCH'&&x.p.endsWith('/heads/main')).length,1);assert.ok(!f.calls.some(x=>x.p.endsWith('/check-runs')));
  const ownerBlob=[...f.blobs.values()].find(x=>x.includes('"version": 1'));assert.equal(JSON.parse(ownerBlob).articles['own-note'].id,'github:21');
  const articleBlob=[...f.blobs.values()].find(x=>x.startsWith('---'));assert.match(articleBlob,/author_id: "github:21"/);
 });

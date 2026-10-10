@@ -1,7 +1,7 @@
 /* 全部文章页：模块筛选 + 关键字搜索。 */
-import { el, debounce } from '../assets/js/util.js';
-import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js';
-import { pageHead, articleList, emptyState } from '../assets/js/layout.js';
+import { el, debounce } from '../assets/js/util.js?v=20261010-publication-preview';
+import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js?v=20261010-publication-preview';
+import { pageHead, articleList, emptyState } from '../assets/js/layout.js?v=20261010-publication-preview';
 
 export async function renderArticles(container, params = {}) {
   const [modules, articles] = await Promise.all([loadModules(), loadArticles()]);

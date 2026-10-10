@@ -28,6 +28,8 @@ export async function readPosts(root) {
     if (typeof meta.title !== 'string' || !meta.title.trim()) throw new Error(`${file} 缺少标题`);
     if (!moduleIds.has(meta.module)) throw new Error(`${file} 引用了不存在的模块`);
     if (!isDate(meta.date) || !isDate(meta.updated) || meta.updated < meta.date) throw new Error(`${file} 日期无效`);
+    for (const key of ['uploaded_at','published_at','updated_at']) if(meta[key]!=null&&!(typeof meta[key]==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(meta[key])&&Number.isFinite(Date.parse(meta[key]))))throw new Error(file+' 的时间戳无效');
+    if(meta.publication_id!=null&&!(typeof meta.publication_id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(meta.publication_id)))throw new Error(file+' 的发布记录编号无效');
     if (meta.tags != null && (!Array.isArray(meta.tags) || meta.tags.some(x => typeof x !== 'string'))) throw new Error(`${file} tags 必须为文本数组`);
     if (meta.order != null && !Number.isFinite(meta.order)) throw new Error(`${file} order 必须为数字`);
     if (meta.draft != null && typeof meta.draft !== 'boolean') throw new Error(`${file} draft 必须为布尔值`);

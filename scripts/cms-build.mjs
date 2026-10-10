@@ -27,6 +27,7 @@ export async function buildSite(root, out) {
     await writeFile(path.join(out, 'content/articles', `${slug}.json`), JSON.stringify(frontendMeta, null, 2) + '\n');
     await writeFile(path.join(out, 'content/articles', `${slug}.md`), body);
   }
+  await writeFile(path.join(out,'build-info.json'),JSON.stringify({commit:process.env.GITHUB_SHA||null,builtAt:new Date().toISOString(),publications:published.filter(p=>p.meta.publication_id).map(p=>({id:p.meta.publication_id,slug:p.slug}))},null,2)+'\n');
   const index = JSON.stringify({ articles: published.map(x => x.slug) }, null, 2) + '\n';
   await writeFile(path.join(out, 'content/articles.json'), index);
   await mkdir(path.join(out, 'content/generated'), { recursive: true });
@@ -35,7 +36,7 @@ export async function buildSite(root, out) {
   config.collections.find(x => x.name === 'posts').fields.find(x => x.name === 'module').options = modules.map(x => ({ label: x.title, value: x.slug }));
   await writeFile(path.join(out, 'admin/config.yml'), YAML.stringify(config));
   const template=await readFile(path.join(out,'index.html'),'utf8');
-  const routes=['modules','articles','about','login','workspace','workspace/submissions','workspace/review','workspace/published','workspace/assist',...modules.map(m=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.slug))throw new Error('Invalid module slug');return 'module/'+m.slug;}),...published.map(p=>'article/'+p.slug)];
+  const routes=['modules','articles','about','login','workspace','workspace/submissions','workspace/review','workspace/approved','workspace/published','workspace/assist',...modules.map(m=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.slug))throw new Error('Invalid module slug');return 'module/'+m.slug;}),...published.map(p=>'article/'+p.slug)];
   for(const route of routes){await mkdir(path.join(out,route),{recursive:true});await writeFile(path.join(out,route,'index.html'),template);}
   return { total: posts.length, published: published.length };
 }

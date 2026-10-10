@@ -104,3 +104,17 @@ test('Incomplete image and attachment records fail before publication', async ()
     await assert.rejects(readPosts(root), /文章图片.*缺少文件地址/);
   } finally { await cleanup(root); }
 });
+
+test('Deployment evidence includes only actual published versions and preserves exact timestamps',async()=>{
+ const root=await fixture(),id='11111111-2222-3333-4444-555555555555',time='2026-10-10T05:06:07.123Z';
+ try{
+  await savePost(root,'live-time',{...metadata('live-time'),uploaded_at:time,published_at:time,publication_id:id},'已发布正文');
+  await savePost(root,'draft-time',{...metadata('draft-time'),draft:true,publication_id:'99999999-2222-3333-4444-555555555555'},'未审核正文');
+  const out=path.join(root,'dist');await buildSite(root,out);
+  assert.deepEqual(JSON.parse(await readFile(path.join(out,'build-info.json'),'utf8')).publications,[{id,slug:'live-time'}]);
+  assert.equal(JSON.parse(await readFile(path.join(out,'content/articles/live-time.json'),'utf8')).uploaded_at,time);
+  await access(path.join(out,'workspace/approved/index.html'));
+  await savePost(root,'live-time',{...metadata('live-time'),uploaded_at:'bad-date'},'正文');
+  await assert.rejects(readPosts(root),/时间戳无效/);
+ }finally{await cleanup(root);}
+});

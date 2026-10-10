@@ -1,8 +1,8 @@
 # Lemoncat的喵喵屋
 
-个人学习笔记与投稿站，托管在 GitHub Pages。新版使用柠檬猫背景、奶油色与绿色界面、独立页面路径和无文字互动桌宠。保留原有六个知识模块和五篇文章。
+个人学习笔记与投稿站，托管在 GitHub Pages。新版使用柠檬猫背景、奶油色与绿色界面、独立页面路径和无文字互动桌宠。保留六个知识模块和全部现有文章。
 
-网站：<https://oslemoncat.github.io/>。部署与使用说明：[PORTAL_SETUP.md](PORTAL_SETUP.md)。旧版 Decap 接入说明：[CMS_SETUP.md](CMS_SETUP.md)。**先更新 Cloudflare Worker，再部署新版网站。**
+网站：<https://oslemoncat.github.io/>。本次日期、预审与附件预览更新说明：[PUBLICATION_PREVIEW_SETUP.md](PUBLICATION_PREVIEW_SETUP.md)。部署与使用说明：[PORTAL_SETUP.md](PORTAL_SETUP.md)。旧版 Decap 接入说明：[CMS_SETUP.md](CMS_SETUP.md)。**先更新 Cloudflare Worker，再部署新版网站。**
 
 所有人使用同一个 GitHub 登录入口。普通用户编辑并提交审核，管理员审核、发布和删除文章。DeepSeek 助手可选，由管理员在 Cloudflare Secret 配置密钥。
 
@@ -45,7 +45,7 @@ npm run cms:build
 | ` ```c … ``` ` | 代码块 |
 | `> 引用` | 引用块 |
 | `**粗体**`、`*斜体*`、`~~删除线~~` | 行内强调 |
-| `[文字](链接)`、`![图注](路径)` | 链接（外链自动新标签打开）、图片 |
+| `[文字](链接)`、`![图注](路径)` | 链接（当前标签页）、图片 |
 | 空行分隔的 `\|` 表格 | 表格 |
 | `::: note/tip/warn/key 标题` … `:::` | 提示块 |
 | `::: definition/theorem/example/proof 标题` … `:::` | 定理块 |

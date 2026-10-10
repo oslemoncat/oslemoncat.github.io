@@ -1,3 +1,3 @@
-import {el} from '../assets/js/util.js';
-import {pageHead} from '../assets/js/layout.js';
+import {el} from '../assets/js/util.js?v=20261010-publication-preview';
+import {pageHead} from '../assets/js/layout.js?v=20261010-publication-preview';
 export function renderAbout(container){container.replaceChildren(el('div',{class:'wrap about-page'},[pageHead('关于喵喵屋','把知识整理成自己的语言，让每一次学习都留下痕迹。'),el('div',{class:'prose'},[el('h2',{text:'一处可以慢慢积累的小屋'}),el('p',{text:'这里收录数学分析、空间解析几何与线性代数、程序设计、Python、学术写作和日常杂记。你可以按模块寻找文章，也可以搜索标题、摘要和标签。'}),el('h2',{text:'一起写，一起分享'}),el('p',{text:'所有用户都从同一个 GitHub 登录入口进入。你可以在写作区编辑文章、添加图片与附件，再提交给 Lemoncat 审核。管理员负责审核、发布和删除文章。'}),el('h2',{text:'身边的柠檬猫'}),el('p',{text:'小猫会用动作回应你的触碰。可以拖动它，也可以从小菜单里让它休息或收起来。'}),el('a',{class:'btn btn--primary',href:'/workspace/',text:'进入写作区'})])]))}

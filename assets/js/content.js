@@ -1,5 +1,5 @@
 /* 内容层：站点配置、模块、文章元数据与正文的加载与缓存。 */
-import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js';
+import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js?v=20261010-publication-preview';
 
 const SITE_DEFAULT = {
   title: 'Lemoncat的喵喵屋',
@@ -101,6 +101,10 @@ export function loadArticles() {
           accent: module ? module.accent : '#6b7280',
           date: normalizeDate(meta.date),
           updated: normalizeDate(meta.updated),
+          uploadedAt: meta.uploaded_at || '',
+          publishedAt: meta.published_at || '',
+          updatedAt: meta.updated_at || '',
+          publicationId: meta.publication_id || '',
           tags: Array.isArray(meta.tags) ? meta.tags : [],
           cover: meta.cover || '',
           images: Array.isArray(meta.images) ? meta.images : [],

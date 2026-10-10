@@ -5,13 +5,28 @@ export function token() {
   return '';
 }
 export function logout() { localStorage.removeItem(KEY); location.assign('/login/'); }
-export async function api(path, options={}) {
-  const current=token(); if(!current)throw new Error('请先登录。');
-  const response=await fetch(WORKER+path,{method:options.method||'GET',headers:{Authorization:'Bearer '+current,...(options.body?{'Content-Type':'application/json'}:{})},...(options.body?{body:JSON.stringify(options.body)}:{}),cache:'no-store'});
-  let data;try{data=await response.json();}catch{throw new Error('登录服务需要升级，请先部署新版 Worker。');}
-  if(response.status===401){localStorage.removeItem(KEY);}
-  if(!response.ok){const error=new Error(data.message||'操作未完成，请稍后重试。');error.check=data.check;error.status=response.status;error.code=data.code;throw error;}
-  return data;
+export async function api(path,options={}){
+ const current=token();if(!current)throw new Error('请先登录。');
+ const body=options.body?JSON.stringify(options.body):null;
+ const headers={Authorization:'Bearer '+current,...(body?{'Content-Type':'application/json'}:{})};
+ let response;
+ if(options.onUploadProgress&&body){
+  response=await new Promise((resolve,reject)=>{
+   const request=new XMLHttpRequest();request.open(options.method||'POST',WORKER+path);
+   for(const [name,value]of Object.entries(headers))request.setRequestHeader(name,value);
+   request.timeout=120000;
+   request.upload.addEventListener('progress',e=>{if(e.lengthComputable)options.onUploadProgress(e.loaded/e.total);});
+   request.upload.addEventListener('load',()=>options.onUploadProgress(1));
+   request.addEventListener('load',()=>resolve({status:request.status,ok:request.status>=200&&request.status<300,json:async()=>JSON.parse(request.responseText)}));
+   request.addEventListener('error',()=>reject(new Error('网络连接中断，稿件仍保留在页面；请查看投稿状态后重试。')));
+   request.addEventListener('timeout',()=>reject(new Error('保存响应超时，请先查看投稿是否已收到，再决定是否重试。')));
+   request.send(body);
+  });
+ }else response=await fetch(WORKER+path,{method:options.method||'GET',headers,...(body?{body}:{}),cache:'no-store'});
+ let data;try{data=await response.json();}catch{throw new Error('登录服务需要升级，请先部署新版 Worker。');}
+ if(response.status===401)localStorage.removeItem(KEY);
+ if(!response.ok){const error=new Error(data.message||'操作未完成，请稍后重试。');Object.assign(error,{check:data.check,status:response.status,code:data.code});throw error;}
+ return data;
 }
 export async function restoreSession(){if(!token())return null;return api('/api/session');}
 export function login() {

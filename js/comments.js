@@ -1,5 +1,5 @@
-import {el} from '../assets/js/util.js?v=20261009-navigation-controls';
-import {api} from '../assets/js/auth.js?v=20261009-comments';
+import {el} from '../assets/js/util.js?v=20261010-publication-preview';
+import {api} from '../assets/js/auth.js?v=20261010-publication-preview';
 
 export function createComments(article,user=window.__LEMONCAT_USER__){
   const endpoint='/api/articles/'+encodeURIComponent(article.slug)+'/comments';
@@ -86,7 +86,7 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
     row.append(el('div',{class:'comment-header'},[
       el('img',{class:'comment-avatar',src:item.avatar,alt:'',loading:'lazy',width:34,height:34}),
       el('div',{class:'comment-meta'},[
-        el('a',{class:'comment-author',href:'https://github.com/'+encodeURIComponent(item.author),target:'_blank',rel:'noopener noreferrer',text:item.author}),
+        el('a',{class:'comment-author',href:'https://github.com/'+encodeURIComponent(item.author),target:'_self',rel:'noopener noreferrer',text:item.author}),
         el('time',{datetime:new Date(item.createdAt).toISOString(),text:time(item.createdAt)+(item.updatedAt>item.createdAt?' · 已编辑':'')})
       ]),actions
     ]));

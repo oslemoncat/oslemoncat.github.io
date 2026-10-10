@@ -39,7 +39,6 @@ export function el(tag, attrs = {}, children = []) {
     node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
   }
   if(tag==='a' && node.getAttribute('href')?.startsWith('#/')){const [route,query]=node.getAttribute('href').slice(1).split('?');node.setAttribute('href',route.replace(/\/$/,'')+'/' +(query?'?'+query:''));}
-  if(tag==='a' && !node.hasAttribute('target') && /^\/(?:$|modules\/|module\/|articles\/|article\/|about\/|workspace\/|login\/)/.test(node.getAttribute('href')||'')){node.setAttribute('target','_blank');node.setAttribute('rel','noopener noreferrer');}
   return node;
 }
 
@@ -165,7 +164,7 @@ export function groupBy(items, keyFn) {
 }
 
 export function byDateDesc(a, b) {
-  return String(latestDate(b)).localeCompare(String(latestDate(a)));
+  return String(b.updatedAt||b.publishedAt||b.uploadedAt||latestDate(b)).localeCompare(String(a.updatedAt||a.publishedAt||a.uploadedAt||latestDate(a)));
 }
 
 export function renderSkeleton(container, lines = 3) {
@@ -184,4 +183,12 @@ export function renderError(container, error) {
     el('p', { html: `<code>${escapeHtml(error && error.message ? error.message : String(error))}</code>` }),
     el('p', { html: '如果你是双击 HTML 文件打开的页面，浏览器的安全策略会阻止读取数据文件。请在项目目录下运行 <code>python -m http.server 8000</code>，再访问 <code>http://localhost:8000</code>。' }),
   ]));
+}
+
+/** Exact server timestamps shown in Asia/Shanghai; legacy dates remain dates. */
+export function formatTimestamp(value){
+ if(!value)return '';
+ if(!/T/.test(value))return normalizeDate(value);
+ const date=new Date(value);if(!Number.isFinite(date.getTime()))return '';
+ return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(date);
 }

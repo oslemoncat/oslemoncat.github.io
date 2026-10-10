@@ -13,6 +13,8 @@ cover: assets/images/python-batch-docx/cover.svg
 order: 10
 slug: python-batch-docx
 draft: false
+uploaded_at: "2026-10-08T13:59:55Z"
+published_at: "2026-10-08T13:59:55Z"
 ---
 # 需求：从一张表生成一批文档
 

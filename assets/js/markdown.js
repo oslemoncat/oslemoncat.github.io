@@ -4,7 +4,7 @@
         以及 ::: 提示块（note/tip/warn/key）、定理块（definition/theorem/example/proof），
         和 ::: video 外链卡片。
    设计约束：先抽取代码片段与数学公式，再做 HTML 转义，因此公式中的 < > & 不会被破坏。 */
-import { escapeHtml, safeUrl, el } from './util.js';
+import { escapeHtml, safeUrl, el } from './util.js?v=20261010-publication-preview';
 
 /* 提示块与定理块的类型注册表——要加新类型，只改这里。 */
 const CONTAINER_TYPES = {
@@ -63,7 +63,7 @@ export function renderInline(source) {
   text = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (match, label, href, title) => {
     const url = safeUrl(href);
     const external = /^https?:/i.test(url);
-    const attrs = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+    const attrs = external ? ' target="_self" rel="noopener noreferrer"' : '';
     const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
     return stash(`<a href="${escapeHtml(url)}"${attrs}${titleAttr}>${label}</a>`);
   });
@@ -221,7 +221,7 @@ function renderVideoCard(title, bodyLines) {
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`,
     `</div>`,
     `<div class="video-card__body">`,
-    `<p class="video-card__title"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${renderInline(label)}</a></p>`,
+    `<p class="video-card__title"><a href="${escapeHtml(href)}" target="_self" rel="noopener noreferrer">${renderInline(label)}</a></p>`,
     `<p class="video-card__meta">${metaParts.length ? escapeHtml(metaParts.join(' · ')) : '在新标签页打开'}</p>`,
     `</div>`,
     `</div>`,

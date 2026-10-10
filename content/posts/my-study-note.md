@@ -13,5 +13,7 @@ images: []
 attachments: [{"file":"/assets/files/uploads/file-0393f555-10b1-423c-bb90-2d9441fcb351.pdf","title":"第一次习题课_学生版.pdf"}]
 author: "Zzzz-z-z"
 author_id: "github:325491712"
+uploaded_at: "2026-10-09T13:14:59Z"
+published_at: "2026-10-09T13:14:59Z"
 ---
 线性代数习题

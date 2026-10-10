@@ -1,5 +1,5 @@
-import {el} from '../assets/js/util.js';
-import {login} from '../assets/js/auth.js?v=20261009-delete-review';
+import {el} from '../assets/js/util.js?v=20261010-publication-preview';
+import {login} from '../assets/js/auth.js?v=20261010-publication-preview';
 export function safeNext(value){try{const url=new URL(value||'/',location.origin);if(url.origin!==location.origin||url.pathname.startsWith('/login')||url.pathname.startsWith('/admin'))return '/';return url.pathname+url.search;}catch{return '/';}}
 export function renderLogin(container, params=new URLSearchParams(), error=''){
   const status=el('p',{class:'form-status',role:'status',text:error});

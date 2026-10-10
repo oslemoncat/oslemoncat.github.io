@@ -1,17 +1,17 @@
 /* 应用入口：独立路径路由、统一登录、页头页脚和页面分发。
    构建为模块、文章、登录与写作区生成对应 HTML。旧 #/ 链接会跳到新路径。
    startApp 可注入测试依赖；boot 启用真实登录检查。 */
-import { el } from './assets/js/util.js?v=20261009-navigation-controls';
-import { loadSite, loadArticles } from './assets/js/content.js';
-import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261009-module-cards-v3';
-import { initTheme } from './assets/js/theme.js';
-import {restoreSession} from './assets/js/auth.js?v=20261009-delete-review';
-import {renderLogin,safeNext} from './js/login.js';
-import { initAnchorScroll } from './assets/js/toc.js';
+import { el } from './assets/js/util.js?v=20261010-publication-preview';
+import { loadSite, loadArticles } from './assets/js/content.js?v=20261010-publication-preview';
+import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261010-publication-preview';
+import { initTheme } from './assets/js/theme.js?v=20261010-publication-preview';
+import {restoreSession} from './assets/js/auth.js?v=20261010-publication-preview';
+import {renderLogin,safeNext} from './js/login.js?v=20261010-publication-preview';
+import { initAnchorScroll } from './assets/js/toc.js?v=20261010-publication-preview';
 
 const ROUTES = [
   {pattern:/^\/login\/?$/,page:'login',section:''},
-  {pattern:/^\/workspace(?:\/(submissions|review|published|assist))?\/?$/,page:'workspace',section:''},
+  {pattern:/^\/workspace(?:\/(submissions|review|approved|published|assist))?\/?$/,page:'workspace',section:''},
   { pattern: /^\/?$/, page: 'home', section: 'home' },
   { pattern: /^\/modules\/?$/, page: 'modules', section: 'modules' },
   { pattern: /^\/module\/(.+?)\/?$/, page: 'module', section: 'modules' },
@@ -21,14 +21,14 @@ const ROUTES = [
 ];
 
 const LOADERS = {
-  workspace:()=>import('./js/workspace.js?v=20261009-navigation-controls').then(m=>m.renderWorkspace),
+  workspace:()=>import('./js/workspace.js?v=20261010-publication-preview').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
-  home: () => import('./js/home.js?v=20261009-module-cards-v3').then((mod) => mod.renderHome),
-  modules: () => import('./js/modules.js?v=20261009-module-cards-v3').then((mod) => mod.renderModules),
-  module: () => import('./js/module.js').then((mod) => mod.renderModule),
-  articles: () => import('./js/articles.js').then((mod) => mod.renderArticles),
-  article: () => import('./js/article.js?v=20261009-comments').then((mod) => mod.renderArticle),
-  about: () => import('./js/about.js').then((mod) => mod.renderAbout),
+  home: () => import('./js/home.js?v=20261010-publication-preview').then((mod) => mod.renderHome),
+  modules: () => import('./js/modules.js?v=20261010-publication-preview').then((mod) => mod.renderModules),
+  module: () => import('./js/module.js?v=20261010-publication-preview').then((mod) => mod.renderModule),
+  articles: () => import('./js/articles.js?v=20261010-publication-preview').then((mod) => mod.renderArticles),
+  article: () => import('./js/article.js?v=20261010-publication-preview').then((mod) => mod.renderArticle),
+  about: () => import('./js/about.js?v=20261010-publication-preview').then((mod) => mod.renderAbout),
 };
 
 /** 把 location.hash 解析成 { path, params }。

@@ -5,7 +5,7 @@
   "scripts": {
     "cms:migrate": "node scripts/cms-migrate.mjs",
     "cms:build": "node scripts/cms-build.mjs",
-    "cms:test": "node --test tests/cms-integration.test.mjs tests/oauth.test.mjs tests/portal.test.mjs tests/delete-review.test.mjs tests/comments.test.mjs"
+    "cms:test": "node --test tests/cms-integration.test.mjs tests/oauth.test.mjs tests/portal.test.mjs tests/delete-review.test.mjs tests/comments.test.mjs tests/publication.test.mjs"
   },
   "dependencies": {
     "yaml": "2.9.1"

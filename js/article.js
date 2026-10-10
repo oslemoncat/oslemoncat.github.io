@@ -1,12 +1,14 @@
 /* 文章详情页：正文渲染、数学公式、目录、上下篇和评论。 */
-import { el, resolveUrl, formatDate, latestDate, detectBase } from '../assets/js/util.js';
-import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js';
-import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js';
-import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js';
-import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js';
-import {api} from '../assets/js/auth.js?v=20261009-delete-review';
+import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261010-publication-preview';
+import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261010-publication-preview';
+import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261010-publication-preview';
+import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261010-publication-preview';
+import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261010-publication-preview';
+import {api} from '../assets/js/auth.js?v=20261010-publication-preview';
 
-import {createComments} from './comments.js?v=20261009-comments';
+import {createComments} from './comments.js?v=20261010-publication-preview';
+
+import {createFilePreview} from '../assets/js/preview.js?v=20261010-publication-preview';
 
 const KATEX_CSS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
 const KATEX_JS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
@@ -66,7 +68,7 @@ function renderResources(article, base) {
     const url = resourceUrl(item?.src, base);
     if (!url) return [];
     return [el('figure', { class: 'article-image' }, [
-      el('a', { href: url, target: '_blank', rel: 'noopener noreferrer', 'aria-label': item.caption || '查看完整图片' }, [
+      el('a', { href: url, target: '_self', rel: 'noopener noreferrer', 'aria-label': item.caption || '查看完整图片' }, [
         el('img', { src: url, alt: item.caption || article.title, loading: 'lazy', decoding: 'async' }),
       ]),
       item.caption ? el('figcaption', { text: item.caption }) : null,
@@ -95,12 +97,13 @@ function renderResources(article, base) {
     return [el('li', { class: 'article-attachment' }, [
       el('div', { class: 'article-attachment__header' }, [
         el('div', {}, [
-          el('a', { class: 'article-attachment__title', href: url, target: '_blank', rel: 'noopener noreferrer', text: title }),
+          el('a', { class: 'article-attachment__title', href: url, target: '_self', rel: 'noopener noreferrer', text: title }),
           el('span', { class: 'article-attachment__type', text: extension ? extension.toUpperCase() : '文件' }),
         ]),
         el('a', { class: 'btn btn--ghost', href: url, download: filename, text: '下载', 'aria-label': `下载 ${title}` }),
       ]),
       preview,
+      createFilePreview(url,title),
     ])];
   });
   if (attachments.length) sections.push(el('section', { class: 'article-resources', 'aria-label': '附件与音视频' }, [
@@ -160,7 +163,8 @@ export async function renderArticle(container, slug, options = {}) {
     el('h1', { class: 'article__title', text: article.title }),
     article.summary ? el('p', { class: 'article__summary', text: article.summary }) : null,
     el('div', { class: 'article__meta' }, [
-      article.date ? el('span', { text: `发布于 ${formatDate(article.date)}` }) : null,
+      article.date ? el('span', { text: `发布于 ${formatTimestamp(article.publishedAt||article.date)}` }) : null,
+      article.uploadedAt ? el('span',{text:'上传于 '+formatTimestamp(article.uploadedAt)}) : null,
       article.updated ? el('span', { text: `更新于 ${formatDate(article.updated)}（${relativeTime(article.updated)}）` }) : null,
       el('span', { text: `${Math.max(1, Math.round(markdown.length / 400))} 分钟阅读` }),
     ]),

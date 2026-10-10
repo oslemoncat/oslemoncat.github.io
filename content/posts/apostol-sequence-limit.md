@@ -13,6 +13,8 @@ cover: assets/images/apostol-sequence-limit/cover.svg
 order: 10
 slug: apostol-sequence-limit
 draft: false
+uploaded_at: "2026-10-08T13:59:55Z"
+published_at: "2026-10-08T13:59:55Z"
 ---
 # 这一节要解决什么
 
