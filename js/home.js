@@ -1,6 +1,6 @@
-import {el} from '../assets/js/util.js?v=20261010-publication-preview';
-import {loadSite,loadModules,loadArticles,decorateModules} from '../assets/js/content.js?v=20261010-publication-preview';
-import {sectionHead,moduleCard,articleList} from '../assets/js/layout.js?v=20261010-publication-preview';
+import {el} from '../assets/js/util.js?v=20261012-comment-replies';
+import {loadSite,loadModules,loadArticles,decorateModules} from '../assets/js/content.js?v=20261012-comment-replies';
+import {sectionHead,moduleCard,articleList} from '../assets/js/layout.js?v=20261012-comment-replies';
 export async function renderHome(container){
  const [site,modules,articles]=await Promise.all([loadSite(),loadModules(),loadArticles()]);
  const hero=el('section',{class:'hero'},[el('div',{class:'wrap hero__inner'},[

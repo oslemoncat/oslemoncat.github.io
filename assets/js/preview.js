@@ -1,6 +1,6 @@
 /* Shared in-page previews. Heavy parsers load only when a file is opened. */
-import {el,safeUrl} from './util.js?v=20261010-publication-preview';
-import {renderMarkdown} from './markdown.js?v=20261010-publication-preview';
+import {el,safeUrl} from './util.js?v=20261012-comment-replies';
+import {renderMarkdown} from './markdown.js?v=20261012-comment-replies';
 const libraries=new Map();
 function script(name,global){
  if(window[global])return Promise.resolve(window[global]);

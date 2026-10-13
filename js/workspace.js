@@ -1,10 +1,10 @@
-import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261010-publication-preview';
-import {api,logout} from '../assets/js/auth.js?v=20261010-publication-preview';
-import {loadModules,loadArticles,loadArticleBody} from '../assets/js/content.js?v=20261010-publication-preview';
-import {renderMarkdown} from '../assets/js/markdown.js?v=20261010-publication-preview';
-import {pageHead} from '../assets/js/layout.js?v=20261010-publication-preview';
-import {createFilePreview} from '../assets/js/preview.js?v=20261010-publication-preview';
-import {createPublicationStatus} from '../assets/js/publication.js?v=20261010-publication-preview';
+import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261012-comment-replies';
+import {api,logout} from '../assets/js/auth.js?v=20261012-comment-replies';
+import {loadModules,loadArticles,loadArticleBody} from '../assets/js/content.js?v=20261012-comment-replies';
+import {renderMarkdown} from '../assets/js/markdown.js?v=20261012-comment-replies';
+import {pageHead} from '../assets/js/layout.js?v=20261012-comment-replies';
+import {createFilePreview} from '../assets/js/preview.js?v=20261012-comment-replies';
+import {createPublicationStatus} from '../assets/js/publication.js?v=20261012-comment-replies';
 const today=()=>new Date(Date.now()+8*3600_000).toISOString().slice(0,10);
 const labels={pending:'等待审核',approved:'审核通过',published:'审核通过',closed:'未通过'};
 function generatedPost(source){const match=/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);if(!match)throw new Error('无法读取稿件。');const post={body:match[2]};for(const line of match[1].split('\n')){const field=/^([a-z_]+):\s*(.*)$/.exec(line);if(field){try{post[field[1]]=JSON.parse(field[2]);}catch{post[field[1]]=field[2];}}}return post;}

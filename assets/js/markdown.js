@@ -4,7 +4,7 @@
         以及 ::: 提示块（note/tip/warn/key）、定理块（definition/theorem/example/proof），
         和 ::: video 外链卡片。
    设计约束：先抽取代码片段与数学公式，再做 HTML 转义，因此公式中的 < > & 不会被破坏。 */
-import { escapeHtml, safeUrl, el } from './util.js?v=20261010-publication-preview';
+import { escapeHtml, safeUrl, el } from './util.js?v=20261012-comment-replies';
 
 /* 提示块与定理块的类型注册表——要加新类型，只改这里。 */
 const CONTAINER_TYPES = {

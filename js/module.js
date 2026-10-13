@@ -1,7 +1,7 @@
 /* 单个知识模块页：模块下的文章列表。 */
-import { el } from '../assets/js/util.js?v=20261010-publication-preview';
-import { loadModules, loadArticles, decorateModules, findModule } from '../assets/js/content.js?v=20261010-publication-preview';
-import { breadcrumbs, pageHead, articleList, emptyState } from '../assets/js/layout.js?v=20261010-publication-preview';
+import { el } from '../assets/js/util.js?v=20261012-comment-replies';
+import { loadModules, loadArticles, decorateModules, findModule } from '../assets/js/content.js?v=20261012-comment-replies';
+import { breadcrumbs, pageHead, articleList, emptyState } from '../assets/js/layout.js?v=20261012-comment-replies';
 
 export async function renderModule(container, slug) {
   const [modules, articles] = await Promise.all([loadModules(), loadArticles()]);

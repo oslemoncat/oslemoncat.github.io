@@ -1,6 +1,6 @@
 /* 布局与共享组件：页头、页脚、卡片、列表、分页、面包屑。 */
-import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261010-publication-preview';
-import { icon } from './theme.js?v=20261010-publication-preview';
+import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261012-comment-replies';
+import { icon } from './theme.js?v=20261012-comment-replies';
 
 /* ------------------------------------------------------------------ 页头 */
 export function renderHeader(site, activeSection = '', user = null) {
@@ -34,7 +34,7 @@ export function renderHeader(site, activeSection = '', user = null) {
         el('span', { text: site.shortTitle || site.title }),
       ]),
       nav,
-      el('div',{class:'header-actions'},[themeBtn,el('a',{class:'account-link',href:user?'/workspace/':'/login/','aria-label':user?'进入写作区':'登录'},user?[el('img',{src:user.avatar||'/assets/images/favicon.svg?v=4',alt:'',width:36,height:36}),el('span',{text:user.login})]:[el('span',{text:'登录'})]),toggle]),
+      el('div',{class:'header-actions'},[themeBtn,user?el('a',{class:'account-link',href:'/workspace/','aria-label':'进入写作区'},[el('img',{src:user.avatar||'/assets/images/favicon.svg?v=4',alt:'',width:36,height:36}),el('span',{text:user.login})]):null,toggle]),
     ]),
   ]);
 

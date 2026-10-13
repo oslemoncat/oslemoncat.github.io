@@ -1,5 +1,5 @@
-import {el} from './util.js?v=20261010-publication-preview';
-import {api} from './auth.js?v=20261010-publication-preview';
+import {el} from './util.js?v=20261012-comment-replies';
+import {api} from './auth.js?v=20261012-comment-replies';
 export function createPublicationStatus(record){
  const box=el('div',{class:'publication-progress',role:'status'}),message=el('p',{text:'审核通过，正在查询部署进度…'}),progress=el('progress',{'aria-label':'发布进度',max:1}),steps=el('ol',{class:'publication-steps'},['已上传','审核通过','检查构建','部署上线'].map(text=>el('li',{text}))),refresh=el('button',{type:'button',class:'btn btn--ghost',text:'刷新进度'});
  box.append(steps,progress,message,refresh);let timer=null,busy=false,attempts=0,finished=false;

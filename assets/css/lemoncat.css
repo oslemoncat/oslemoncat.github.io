@@ -41,8 +41,11 @@ html[data-theme=dark] .article-comments .comment-button.danger{color:#efaea2;bor
 .comment-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
 .comment-author{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
 .comment-meta time{font-size:12px;color:var(--text-muted)}
-.comment-actions{display:flex;gap:8px;margin-left:auto;flex-shrink:0}
+.comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;flex-shrink:0}
 .comment-body{white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.85 var(--font-sans);margin:12px 0 0}
+.comment-replies{list-style:none;margin:16px 0 0 12px;padding:0 0 0 16px;border-left:2px solid var(--border);min-width:0}
+.comment--reply{padding:16px 0}.comment-reply-to{margin:10px 0 0;color:var(--text-muted);font-size:13px;overflow-wrap:anywhere}
+.comment--deleted>.comment-body{color:var(--text-muted)}.comment-replies-more{margin-top:12px}
 .comments-empty{font-size:14px;color:var(--text-muted);padding:18px 0}
 .comment-edit-form{margin-top:14px}.comment-edit-actions{display:flex;gap:10px;margin-top:10px}
 @media(max-width:600px){.comments-head h2{font-size:23px}.article-comments{margin-top:28px;padding-top:22px}.comment-header{flex-wrap:wrap;gap:8px}.comment-actions{margin-left:0;flex-basis:100%;padding-left:0}.comment-form-footer .field-hint{flex-basis:100%}.comment-form-footer .comment-button{margin-left:auto}.comment-meta{flex:1}.comment-body{font-size:14px}.article-comments .comment-button{min-width:72px;padding:8px 13px}}
