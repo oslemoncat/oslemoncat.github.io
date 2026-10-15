@@ -53,12 +53,16 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
         const prose=el('div',{class:'prose review-prose',html:renderMarkdown(post.body).html});
         for(const image of prose.querySelectorAll('img'))image.src=mediaUrl(image.getAttribute('src')||'');
         for(const link of prose.querySelectorAll('a')){const href=link.getAttribute('href')||'';if(/^\/?assets\//.test(href)){link.href=mediaUrl(href);link.target='_self';link.rel='noopener noreferrer';}}
-        stage.append(el('h2',{text:post.title||detail.title}),el('p',{class:'muted',text:'投稿人：'+detail.author}),prose);
+        const reviewModules=await loadModules(),submittedModule=reviewModules.find(module=>module.slug===post.module);let reviewModule=null;
+        stage.append(el('h2',{text:post.title||detail.title}),el('p',{class:'muted',text:'投稿人：'+detail.author}),el('p',{class:'muted',text:'投稿分区：'+(submittedModule?.title||post.module||'未指定')}),prose);
         if(post.images?.length)stage.append(el('div',{class:'review-media'},post.images.map(image=>el('figure',{},[el('img',{src:mediaUrl(image.src),alt:image.caption||'',loading:'lazy'}),el('figcaption',{text:image.caption||''})]))));
         if(post.attachments?.length)stage.append(el('ul',{class:'review-files'},post.attachments.map(file=>el('li',{},[el('a',{href:mediaUrl(file.file),text:file.title||file.file.split('/').pop(),target:'_self'}),createFilePreview(mediaUrl(file.file),file.title)]))));
         if(detail.publication)stage.append(createPublicationStatus(detail.publication));
         if(detail.files?.length)stage.append(el('details',{class:'review-details'},[el('summary',{text:'查看本次修改的文件（'+detail.files.length+'）'}),el('ul',{class:'review-files'},detail.files.map(file=>el('li',{text:file.path})))]));
         if(admin&&detail.state==='open'){
+          reviewModule=el('select',{class:'field-input','aria-label':'发布分区',disabled:!detail.canSetModule});
+          for(const module of reviewModules)reviewModule.append(el('option',{value:module.slug,text:module.title}));reviewModule.value=post.module;
+          stage.append(el('label',{class:'field review-module'},[el('span',{text:'发布分区'}),reviewModule,el('span',{class:'field-hint',text:detail.canSetModule?'可调整所属知识模块，审核发布时一起保存。':'更新 Cloudflare Worker 后可在这里修改分区。'})]));
           const checkBox=el('div',{class:'review-check',role:'status'}),refresh=el('button',{class:'text-button',type:'button',text:'刷新检查状态'});
           const drawCheck=()=>{checkBox.replaceChildren(el('p',{text:detail.check?.message||'请刷新检查状态。'}));const url=safeCheckUrl(detail.check?.url);if(url)checkBox.append(el('a',{href:url,target:'_self',rel:'noopener noreferrer',text:detail.check.status==='approval_required'?'去 GitHub 批准运行检查':'打开检查详情'}));checkBox.append(refresh);};
           stage.append(checkBox);
@@ -66,8 +70,8 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
           stage.append(confirmation);
           const publish=el('button',{class:'btn btn--primary',type:'button',text:'审核通过并发布'}),reject=el('button',{class:'btn btn--ghost danger',type:'button',text:'退回投稿'});
           const updateCheck=()=>{drawCheck();publish.disabled=!confirmed.checked||detail.check?.status!=='success';};
-          refresh.addEventListener('click',async()=>{refresh.disabled=true;try{const fresh=await api('/api/submissions/'+id);if(fresh.sha!==detail.sha||fresh.state!==detail.state){await renderWorkspace(container,params);return;}detail.check=fresh.check;updateCheck();}catch(e){fail(e);}finally{refresh.disabled=false;}});confirmed.addEventListener('change',updateCheck);updateCheck();
-          for(const [button,action]of [[publish,'publish'],[reject,'reject']])button.addEventListener('click',async()=>{if(action==='reject'&&!confirm('确认退回这篇投稿？'))return;publish.disabled=reject.disabled=true;try{const result=await api('/api/submissions/'+id+'/review',{method:'POST',body:{action,sha:detail.sha,confirmed:confirmed.checked}});status.textContent=result.message||(action==='publish'?'审核通过，文章将在部署完成后显示。':'投稿已退回。');if(result.publication){checkBox.remove();confirmation.remove();stage.append(createPublicationStatus(result.publication));status.append(' ',el('a',{href:'/workspace/approved/',target:'_self',text:'查看审核通过列表'}));}}catch(e){fail(e);if(e.check)detail.check=e.check;updateCheck();reject.disabled=false;}});
+          refresh.addEventListener('click',async()=>{refresh.disabled=true;try{const fresh=await api('/api/submissions/'+id);if(fresh.sha!==detail.sha||fresh.state!==detail.state){await renderWorkspace(container,params);return;}detail.check=fresh.check;updateCheck();}catch(e){fail(e);}finally{refresh.disabled=false;}});confirmed.addEventListener('change',updateCheck);reviewModule.addEventListener('change',()=>{confirmed.checked=false;updateCheck();});updateCheck();
+          for(const [button,action]of [[publish,'publish'],[reject,'reject']])button.addEventListener('click',async()=>{if(action==='reject'&&!confirm('确认退回这篇投稿？'))return;publish.disabled=reject.disabled=true;try{const result=await api('/api/submissions/'+id+'/review',{method:'POST',body:{action,sha:detail.sha,confirmed:confirmed.checked,...(action==='publish'&&detail.canSetModule?{module:reviewModule.value}:{})}});status.textContent=result.message||(action==='publish'?'审核通过，文章将在部署完成后显示。':'投稿已退回。');if(result.publication){reviewModule.disabled=true;checkBox.remove();confirmation.remove();stage.append(createPublicationStatus(result.publication));status.append(' ',el('a',{href:'/workspace/approved/',target:'_self',text:'查看审核通过列表'}));}}catch(e){fail(e);if(e.check)detail.check=e.check;updateCheck();reject.disabled=false;}});
           stage.append(el('div',{class:'editor-actions'},[publish,reject]));
         }else if(detail.state==='open'&&detail.author.toLowerCase()===user.login.toLowerCase())stage.append(el('a',{class:'btn btn--primary',href:'/workspace/?submission='+id,text:'继续编辑'}));
         if(detail.state==='open'&&(admin||detail.canDelete||detail.author.toLowerCase()===user.login.toLowerCase())){const withdraw=el('button',{class:'text-button danger',type:'button',text:'撤回投稿'});withdraw.addEventListener('click',async()=>{if(!confirm('确认撤回这篇待审投稿？'))return;withdraw.disabled=true;try{await api('/api/submissions/'+id,{method:'DELETE'});stage.replaceChildren(el('p',{text:'投稿已撤回，不会发布到网站。'}));}catch(e){fail(e);withdraw.disabled=false;}});stage.append(withdraw);}
@@ -114,18 +118,26 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
       const path=`assets/${image?'images':'files'}/uploads/${safeName}`;files.push({path,content,size:file.size});(image?post.images:post.attachments).push(image?{src:'/'+path,caption:file.name}:{file:'/'+path,title:file.name});
     }drawFiles();status.textContent='文件已加入本次稿件，提交时一起上传。';}catch(e){fail(e);}finally{fileInput.value='';upload.disabled=false;}});
     previewButton.addEventListener('click',()=>{preview.hidden=!preview.hidden;body.hidden=!preview.hidden;previewButton.textContent=preview.hidden?'预览正文':'继续编辑';if(!preview.hidden)preview.innerHTML=renderMarkdown(fields.body.value).html;});
-    const uploadProgress=el('progress',{class:'upload-progress',max:1,value:0,'aria-label':'文件上传进度',hidden:true});
+    const uploadProgress=el('progress',{class:'upload-progress',max:1,value:0,'aria-label':'稿件提交进度'});
+    const uploadTitle=el('strong'),uploadMessage=el('p'),uploadLinks=el('div');
+    const uploadFeedback=el('section',{class:'submission-feedback',role:'status','aria-live':'polite','aria-atomic':'true',hidden:true},[uploadTitle,uploadProgress,uploadMessage,uploadLinks]);
+    const showUpload=(state,message)=>{
+      uploadFeedback.hidden=false;uploadFeedback.dataset.state=state;
+      uploadTitle.textContent={uploading:'正在上传稿件',saving:'上传完成，正在保存',success:admin?'✓ 已保存，等待部署':'✓ 已上传并提交审核',error:'提交未完成'}[state];
+      uploadMessage.textContent=message;uploadProgress.hidden=state==='error';
+      if(state==='saving')uploadProgress.removeAttribute('value');else if(state==='success')uploadProgress.value=1;
+    };
     const submit=el('button',{class:'btn btn--primary',type:'submit',text:admin?(post.kind==='announcement'?'发布公告':'发布文章'):pending?'更新投稿':'提交审核'});
     if(admin)fields.kind.addEventListener('change',()=>{submit.textContent=fields.kind.value==='announcement'?'发布公告':'发布文章';});
-    form.addEventListener('submit',async event=>{event.preventDefault();submit.disabled=true;upload.disabled=true;status.textContent=admin?'正在发布文章…':'正在上传并提交审核…';try{
-      const result=await api(admin?'/api/articles':pending?'/api/submissions/'+pending:'/api/submissions',{method:pending&&!admin?'PATCH':'POST',body:{post:collect(),files:files.map(({size,...f})=>f),...(submission?{sha:submission.sha}:{})},onUploadProgress:ratio=>{uploadProgress.hidden=false;uploadProgress.value=ratio;status.textContent=ratio<1?'上传中 '+Math.floor(ratio*100)+'%':'上传完成，正在保存到仓库…';}});
+    form.addEventListener('submit',async event=>{event.preventDefault();if(submit.disabled)return;const submitLabel=submit.textContent;submit.disabled=true;upload.disabled=true;submit.textContent='正在上传…';uploadProgress.value=0;uploadLinks.replaceChildren();showUpload('uploading','正在发送稿件和附件，请勿重复提交。');status.textContent='';try{
+      const result=await api(admin?'/api/articles':pending?'/api/submissions/'+pending:'/api/submissions',{method:pending&&!admin?'PATCH':'POST',body:{post:collect(),files:files.map(({size,...f})=>f),...(submission?{sha:submission.sha}:{})},onUploadProgress:ratio=>{if(ratio<1){showUpload('uploading','已传输 '+Math.floor(ratio*100)+'%，传输完成后还需保存。');uploadProgress.value=ratio;}else{showUpload('saving',admin?'正在保存文章和附件，请等待后台确认。':'正在保存稿件并创建审核记录，请等待后台确认。');submit.textContent='正在保存…';}}});
       if(submission&&result.sha)submission.sha=result.sha;
-      uploadProgress.hidden=true;uploadedInfo.textContent='上传成功时间：'+(formatTimestamp(result.uploadedAt||result.publication?.uploadedAt)||'已上传');if(result.publication)stage.append(createPublicationStatus(result.publication));
-      saved=true;localStorage.removeItem(draftKey);files.length=0;status.textContent=admin?'文章已发布，网站将在部署完成后更新。':'投稿已提交，等待 Lemoncat 审核。';
+      uploadedInfo.textContent='上传成功时间：'+(formatTimestamp(result.uploadedAt||result.publication?.uploadedAt)||'已上传');if(result.publication)stage.append(createPublicationStatus(result.publication));
+      saved=true;localStorage.removeItem(draftKey);files.length=0;showUpload('success',admin?'文章和附件已保存，部署成功后会出现在网站。':'稿件和附件已保存，等待 Lemoncat 审核，通过后才会公开显示。');submit.textContent=admin?'已保存':pending?'已更新投稿':'已提交审核';uploadLinks.append(el('a',{href:admin?'/workspace/approved/':'/workspace/submissions/'+(result.number?'?id='+result.number:''),text:admin?'查看上线进度':'查看本次投稿'}));
       // Lock the submitted form so attachments are not accidentally resubmitted without their bytes.
       for(const input of form.querySelectorAll('input,textarea,select,button'))input.disabled=true;
       status.append(' ',el('a',{href:'/workspace/submissions/',text:'查看投稿'}));
-    }catch(e){fail(e);submit.disabled=upload.disabled=false;}});
-    form.append(el('div',{class:'editor-main'},[title,el('div',{class:'editor-toolbar'},[upload,previewButton,fileInput]),body,preview]),el('aside',{class:'editor-details'},[kind,slug,module,tagPicker.element,el('p',{class:'field-hint',text:'可新建或选用历史标签。新标签在文章发布后会进入模块的历史标签。'}),summary,date,uploadedInfo,resources,uploadProgress,el('p',{class:'field-hint',text:admin?'发布后会更新网站内容。':'提交的稿件与附件会进入公开仓库，审核通过后才显示在本站。'}),submit]));drawFiles();stage.append(form);
+    }catch(e){showUpload('error',e.message);uploadLinks.append(el('a',{href:'/workspace/submissions/',text:'查看我的投稿，确认后再重试'}));submit.textContent=submitLabel;submit.disabled=upload.disabled=false;}});
+    form.append(el('div',{class:'editor-main'},[title,el('div',{class:'editor-toolbar'},[upload,previewButton,fileInput]),body,preview]),el('aside',{class:'editor-details'},[kind,slug,module,tagPicker.element,el('p',{class:'field-hint',text:'可新建或选用历史标签。新标签在文章发布后会进入模块的历史标签。'}),summary,date,uploadedInfo,resources,el('p',{class:'field-hint',text:admin?'发布后会更新网站内容。':'提交的稿件与附件会进入公开仓库，审核通过后才显示在本站。'}),uploadFeedback,submit]));drawFiles();stage.append(form);
   }catch(e){fail(e);}
 }

@@ -62,3 +62,8 @@ html[data-theme=dark] .article-comments .comment-button.danger{color:#efaea2;bor
 .human-check{margin:14px 0 20px;max-width:100%;min-width:0}.human-check__widget{min-width:0;max-width:100%}
 .comment-security{margin-top:14px}.comment-moderation{margin:18px 0;border:1px solid var(--border);border-radius:12px;padding:12px 14px}.comment-moderation>summary{cursor:pointer}
 .comment-mute-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+
+/* Submission feedback stays next to the action; transfer alone is never success. */
+.submission-feedback{grid-column:1/-1;padding:16px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-elevated);overflow-wrap:anywhere;font-size:14px;line-height:1.7}
+.submission-feedback[hidden]{display:none}.submission-feedback strong{display:block;font-size:16px}.submission-feedback p{margin:8px 0}.submission-feedback a{text-decoration:underline;text-underline-offset:3px}.submission-feedback .upload-progress{display:block;width:100%;height:10px;margin:12px 0;accent-color:var(--accent)}.submission-feedback .upload-progress[hidden]{display:none}
+.submission-feedback[data-state=success]{border-color:var(--accent);background:var(--accent-soft)}.submission-feedback[data-state=error]{border-color:#bd6c60}.submission-feedback[data-state=error] strong{color:#a3473d}.review-module{max-width:360px;margin:24px 0}

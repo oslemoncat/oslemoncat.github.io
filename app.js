@@ -23,7 +23,7 @@ const ROUTES = [
 ];
 
 const LOADERS = {
-  workspace:()=>import('./js/workspace.js?v=20261015-protection').then(m=>m.renderWorkspace),
+  workspace:()=>import('./js/workspace.js?v=20261015-submission-feedback').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
   home: () => import('./js/home.js?v=20261015-protection').then((mod) => mod.renderHome),
   modules: () => import('./js/modules.js?v=20261015-protection').then((mod) => mod.renderModules),

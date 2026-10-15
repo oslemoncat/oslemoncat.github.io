@@ -292,7 +292,7 @@ async function handlePortal(request, env, fetcher) {
       const pr = await getPortalSubmission(identity,env,submissionMatch[1]);
       const content = await inspectPortalSubmission(identity,env,pr);
       const publication=(await readPublications(gh,env)).find(x=>x.submission===pr.number);
-      return portalJson({number:pr.number,title:pr.title.slice(5),author:pr.portalAuthor.login,authorId:'github:'+pr.portalAuthor.id,sha:pr.head.sha,state:publication?'approved':pr.state,publication,canDelete:role==='admin'||pr.portalAuthor.id===user.id,check:role==='admin'&&pr.state==='open'&&!publication?await submissionCheck(identity,env,pr):null,source:content.source,mediaBase:`https://raw.githubusercontent.com/${pr.head.repo.full_name}/${pr.head.sha}/`,files:content.files.map(f=>({path:f.filename,status:f.status}))},200,origin);
+      return portalJson({number:pr.number,title:pr.title.slice(5),author:pr.portalAuthor.login,authorId:'github:'+pr.portalAuthor.id,sha:pr.head.sha,state:publication?'approved':pr.state,publication,canDelete:role==='admin'||pr.portalAuthor.id===user.id,canSetModule:role==='admin'&&pr.state==='open'&&!publication,check:role==='admin'&&pr.state==='open'&&!publication?await submissionCheck(identity,env,pr):null,source:content.source,mediaBase:`https://raw.githubusercontent.com/${pr.head.repo.full_name}/${pr.head.sha}/`,files:content.files.map(f=>({path:f.filename,status:f.status}))},200,origin);
     }
     if(submissionMatch&&request.method==='PATCH'){
       const pr=await getPortalSubmission(identity,env,submissionMatch[1]);
@@ -317,6 +317,12 @@ async function handlePortal(request, env, fetcher) {
       if(input.action!=='publish')throw new PortalError(400,'审核操作无效。');
       const inspected=await inspectPortalSubmission(identity,env,pr),owner=await checkSubmissionOwner(identity,env,pr,inspected),check=await submissionCheck(identity,env,pr);
       if(check.status!=='success'){const e=new PortalError(409,check.message);e.check=check;throw e;}
+      let reviewedSource=inspected.source;
+      if(Object.hasOwn(input,'module')){
+        const modules=JSON.parse(decodeGithub((await gh('/repos/'+env.REPOSITORY+'/contents/content/modules.json')).content));
+        if(typeof input.module!=='string'||!modules.some(module=>module.slug===input.module))throw new PortalError(400,'请选择有效的知识模块，普通投稿不能转为公告。');
+        reviewedSource=setSourceFields(reviewedSource,{module:input.module});
+      }
       const docs=[],media=inspected.files.filter(f=>f.filename!==inspected.path);let bytes=0;
       for(let start=0;start<media.length;start+=3){docs.push(...await Promise.all(media.slice(start,start+3).map(async f=>{
         if(pr.head.repo.full_name.toLowerCase()===env.REPOSITORY.toLowerCase()&&/^[a-f0-9]{40}$/.test(f.sha||''))return {path:f.filename,sha:f.sha};
@@ -324,7 +330,7 @@ async function handlePortal(request, env, fetcher) {
         bytes+=Number(blob.size)||0;if(bytes>20*1024*1024)throw new PortalError(413,'附件总量超过 20 MB。');
         return {path:f.filename,encoding:'base64',content:blob.content.replace(/\s/g,'')};
       }))); }
-      const publication=await publishDocuments(identity,env,docs,inspected.source,owner,{submission:pr.number,reviewedSha:pr.head.sha});
+      const publication=await publishDocuments(identity,env,docs,reviewedSource,owner,{submission:pr.number,reviewedSha:pr.head.sha});
       let message='审核通过，正在部署；上线后会自动更新状态。';
       try{await gh('/repos/'+env.REPOSITORY+'/pulls/'+pr.number,'PATCH',{state:'closed'});}catch{message+='稿件状态同步暂未完成，刷新即可，无需再次发布。';}
       return portalJson({state:'approved',publication,message},200,origin);

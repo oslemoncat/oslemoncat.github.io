@@ -101,3 +101,33 @@ test('Administrator edits retain the announcement type and URL when an older cli
  const f=fixture({previous});f.setUser({id:11,login:'oslemoncat'});
  assert.equal((await f.api('/api/articles','POST',{post})).status,201);assert.match(f.source(),/kind: "announcement"/);assert.match(f.source(),/slug: "sample-note"/);
 });
+
+test('Administrator review changes only the publication module and keeps the submitted author, body and upload time',async()=>{
+ const f=fixture();f.addMain('content/modules.json',JSON.stringify([{slug:'misc',title:'杂记'},{slug:'python',title:'python'}]));
+ const submitted={...post,body:'正文保留\n\nmodule: "misc"\n\n结束',tags:['审核标签']},staged=await f.api('/api/submissions','POST',{post:submitted,files:[]});
+ const memberDetail=await f.api('/api/submissions/7');assert.equal(memberDetail.data.canSetModule,false);
+ f.setUser({id:11,login:'oslemoncat'});assert.equal((await f.api('/api/submissions/7')).data.canSetModule,true);
+ const input={action:'publish',sha:staged.data.sha,module:'python',confirmed:true},result=await f.api('/api/submissions/7/review','POST',input);
+ assert.equal(result.status,200,JSON.stringify(result.data));assert.match(f.source(),/^module: "python"$/m);assert.match(f.source(),/author_id: "github:21"/);
+ assert.equal(f.source().split('\n---\n')[1],submitted.body+'\n');assert.equal(result.data.publication.uploadedAt,staged.data.uploadedAt);
+ assert.deepEqual(JSON.parse(f.file('content/tags.json')).modules.python,['审核标签']);
+ assert.equal(f.calls.filter(c=>c.m==='PATCH'&&c.p.endsWith('/heads/main')).length,1);
+ assert.equal((await f.api('/api/submissions/7/review','POST',input)).data.publication.id,result.data.publication.id);
+ assert.equal(f.calls.filter(c=>c.m==='PATCH'&&c.p.endsWith('/heads/main')).length,1);
+});
+
+test('Review module changes reject announcement, unknown and malformed module values without publishing',async()=>{
+ for(const module of ['announcements','unknown-module',null,{},'misc\nkind: announcement']){
+  const f=fixture(),staged=await f.stage(),before=f.main();f.setUser({id:11,login:'oslemoncat'});
+  const result=await f.api('/api/submissions/7/review','POST',{action:'publish',sha:staged.sha,module});
+  assert.equal(result.status,400,JSON.stringify(result.data));assert.equal(f.main(),before);assert.equal(f.prs.get(7).state,'open');
+ }
+});
+
+test('A member or stale reviewed version cannot publish a module override',async()=>{
+ const f=fixture(),staged=await f.stage(),before=f.main();
+ assert.equal((await f.api('/api/submissions/7/review','POST',{action:'publish',sha:staged.sha,module:'misc',role:'admin'})).status,403);
+ f.setUser({id:11,login:'oslemoncat'});
+ assert.equal((await f.api('/api/submissions/7/review','POST',{action:'publish',sha:hash('stale'),module:'misc'})).status,409);
+ assert.equal(f.main(),before);
+});
