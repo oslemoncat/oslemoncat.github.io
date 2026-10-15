@@ -24,3 +24,29 @@
 后台候选完整测试 91 项通过；其中回复新增 16 项，覆盖同文章约束、真身份、权限、同时间分页、删除留存、重试、并发不改变回复对象和事务回滚。真实 D1 和 Worker 部署需完成上述两步；隔离测试不会向正式评论库写入数据。
 
 [D1 参数化查询与事务批次](https://developers.cloudflare.com/d1/worker-api/d1-database/)。
+
+## 已部署后仍不能评论：先区分原因（2026-10-15）
+
+本次将旧版评论与回复合并为同一套处理逻辑，保留旧数据库普通评论。后台完整回归 95 项通过；页面路由 75 项通过。本地浏览器已验证回复提交、缺表、未绑定及旧版提示；这些结果不等于正式数据库已验证。
+
+使用当前 auth/worker.mjs 更新实际 worker.js 入口并 Deploy 后，管理员会看到具体原因：
+
+- “评论未连接数据库”：检查 Worker 的 Production → Bindings，确认类型是 D1、绑定名 COMMENTS_DB、数据库是现有 lemoncat-comments。
+- “评论表未初始化”：在上述绑定的数据库执行 0001_comments.sql，再执行 0002_comment_replies.sql。
+- “回复表未完整创建”：在同一个绑定的数据库重新执行 0002_comment_replies.sql。
+- “回复功能暂未开放”：后台返回旧版能力，核对实际部署入口和绑定数据库中的 0002 迁移。
+- “评论暂时不可用”：还不能确定原因，需要对应时间的 Worker 错误和文章底部完整提示；不要反复重建数据库。
+- “登录已失效”：从网站重新登录后刷新文章。
+
+两份迁移均可重复执行，保留现有数据。不要删除数据库或旧表。不需要新增变量、Secret 或扩大权限。
+
+可在绑定数据库的 Console 执行以下只读查询，完整升级后应返回四行：
+
+```sql
+SELECT name FROM sqlite_master
+WHERE type='table'
+AND name IN ('comments','comment_rate_limits','comment_links','comment_deletions')
+ORDER BY name;
+```
+
+确认查询的是 Worker 当前绑定的数据库。另一个数据库里存在同名表不能证明当前绑定正确。后台健康页 ok 只表示 Worker 能响应，不能证明评论库和登录后操作正常。

@@ -27,7 +27,7 @@ const LOADERS = {
   modules: () => import('./js/modules.js?v=20261012-comment-replies').then((mod) => mod.renderModules),
   module: () => import('./js/module.js?v=20261012-comment-replies').then((mod) => mod.renderModule),
   articles: () => import('./js/articles.js?v=20261012-comment-replies').then((mod) => mod.renderArticles),
-  article: () => import('./js/article.js?v=20261012-comment-replies').then((mod) => mod.renderArticle),
+  article: () => import('./js/article.js?v=20261015-comment-status').then((mod) => mod.renderArticle),
   about: () => import('./js/about.js?v=20261012-comment-replies').then((mod) => mod.renderAbout),
 };
 

@@ -410,150 +410,108 @@ async function publishedCommentArticle(identity,env,slug){
   if(!front||/^draft:\s*true\s*$/im.test(front[1]))throw new PortalError(404,'文章尚未发布或已删除。');
 }
 async function handleComments(request,env,identity,slug,id){
-  if(!env.COMMENTS_DB?.prepare)throw commentError(503,'评论尚未开放，请稍后再来。','COMMENTS_NOT_CONFIGURED');
+  const setup=(code,detail)=>commentError(503,identity.role==='admin'?detail:'评论尚未开放，请稍后再来。',code);
+  if(!env.COMMENTS_DB?.prepare)throw setup('COMMENTS_NOT_CONFIGURED','评论未连接数据库：请在 lemoncat-cms-auth 的 Production 绑定 COMMENTS_DB → lemoncat-comments，再部署。');
   if(id&&!commentId(id))throw new PortalError(400,'评论地址无效。');
-  const method=request.method;
-  if((!id&&!['GET','POST'].includes(method))||(id&&!['PATCH','DELETE'].includes(method)))throw new PortalError(405,'不支持这个评论操作。');
-  const actor=actorId(identity);
-  if(!actor)throw new PortalError(403,'无法确认评论账号，请重新登录。');
+  if((!id&&!['GET','POST'].includes(request.method))||(id&&!['PATCH','DELETE'].includes(request.method)))throw new PortalError(405,'不支持这个评论操作。');
+  if(!actorId(identity))throw new PortalError(403,'无法确认评论账号，请重新登录。');
   await publishedCommentArticle(identity,env,slug);
-  const db=env.COMMENTS_DB;
   try{
-    const features=await db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name IN ('comment_links','comment_deletions')").first();
-    if(features?.n===2)return await handleThreadedComments(request,db,identity,slug,id);
-    if(!id&&method==='GET'){
-      const url=new URL(request.url),raw=url.searchParams.get('cursor');
-      let cursor=null;
-      if(raw){
-        try{cursor=JSON.parse(new TextDecoder().decode(unb64(raw)));}catch{throw new PortalError(400,'评论分页地址无效，请刷新。');}
-        if(!Array.isArray(cursor)||cursor.length!==2||!Number.isSafeInteger(cursor[0])||cursor[0]<0||!commentId(cursor[1]))throw new PortalError(400,'评论分页地址无效，请刷新。');
-      }
-      const size=20;
-      const statement=cursor
-        ?db.prepare('SELECT * FROM comments WHERE article_slug=?1 AND (created_at<?2 OR (created_at=?2 AND id<?3)) ORDER BY created_at DESC,id DESC LIMIT ?4').bind(slug,cursor[0],cursor[1],size+1)
-        :db.prepare('SELECT * FROM comments WHERE article_slug=?1 ORDER BY created_at DESC,id DESC LIMIT ?2').bind(slug,size+1);
-      const [page,count]=await db.batch([statement,db.prepare('SELECT COUNT(*) AS total FROM comments WHERE article_slug=?1').bind(slug)]);
-      const rows=page.results.slice(0,size),last=rows.at(-1);
-      return {status:200,data:{repliesSupported:false,items:rows.map(row=>commentView(row,identity)),total:count.results[0].total,nextCursor:page.results.length>size?b64(encoder.encode(JSON.stringify([last.created_at,last.id]))):null}};
-    }
-    if(!id&&method==='POST'){
-      const input=await commentInput(request);
-      if(input.parentId!=null)throw commentError(503,'回复暂未开放，请稍后再试。','COMMENTS_REPLIES_NOT_CONFIGURED');
-      if(!commentId(input.requestId))throw new PortalError(400,'提交标识无效，请刷新后重试。');
-      const previous=await db.prepare('SELECT * FROM comments WHERE id=?1').bind(input.requestId).first();
-      const same=row=>row&&row.author_id===actor&&row.article_slug===slug&&row.body===input.body;
-      if(previous){
-        if(!same(previous))throw new PortalError(409,'这次提交已经变化，请刷新后重试。');
-        return {status:200,data:{item:commentView(previous,identity),created:false}};
-      }
-      const now=Date.now(),reservation=crypto.randomUUID();
-      // D1 batch is transactional; a request-specific reservation survives deletion.
-      const [,result]=await db.batch([
-        db.prepare('INSERT INTO comment_rate_limits (author_id,reservation_id,last_post_at) VALUES (?1,?2,?3) ON CONFLICT(author_id) DO UPDATE SET reservation_id=excluded.reservation_id,last_post_at=excluded.last_post_at WHERE comment_rate_limits.last_post_at<=?4').bind(actor,reservation,now,now-20000),
-        db.prepare('INSERT INTO comments (id,article_slug,author_id,author_login,body,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?6 WHERE EXISTS (SELECT 1 FROM comment_rate_limits WHERE author_id=?3 AND reservation_id=?7) ON CONFLICT(id) DO NOTHING').bind(input.requestId,slug,actor,identity.user.login,input.body,now,reservation)
-      ]);
-      const row=await db.prepare('SELECT * FROM comments WHERE id=?1').bind(input.requestId).first();
-      if(!result.meta.changes){
-        if(same(row))return {status:200,data:{item:commentView(row,identity),created:false}};
-        if(row)throw new PortalError(409,'提交标识已使用，请刷新后重试。');
-        throw commentError(429,'评论发表得太快，请间隔 20 秒再试。','COMMENTS_RATE_LIMITED');
-      }
-      return {status:201,data:{item:commentView(row,identity),created:true}};
-    }
-    const row=await db.prepare('SELECT * FROM comments WHERE id=?1 AND article_slug=?2').bind(id,slug).first();
-    if(!row)throw new PortalError(404,'评论已删除或不属于这篇文章。');
-    if(method==='PATCH'){
-      if(row.author_id!==actor)throw new PortalError(403,'只能编辑自己的评论。');
-      const input=await commentInput(request);
-      if(input.updatedAt!==row.updated_at)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
-      const updated=Math.max(Date.now(),row.updated_at+1);
-      const result=await db.prepare('UPDATE comments SET body=?1,updated_at=?2 WHERE id=?3 AND article_slug=?4 AND author_id=?5 AND updated_at=?6')
-        .bind(input.body,updated,id,slug,actor,input.updatedAt).run();
-      if(!result.meta.changes)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
-      return {status:200,data:{item:commentView({...row,body:input.body,updated_at:updated},identity)}};
-    }
-    if(identity.role!=='admin'&&row.author_id!==actor)throw new PortalError(403,'只能删除自己的评论。');
-    const statement=identity.role==='admin'
-      ?db.prepare('DELETE FROM comments WHERE id=?1 AND article_slug=?2').bind(id,slug)
-      :db.prepare('DELETE FROM comments WHERE id=?1 AND article_slug=?2 AND author_id=?3').bind(id,slug,actor);
-    await statement.run();
-    return {status:200,data:{deleted:true}};
+    const schema=await env.COMMENTS_DB.prepare("SELECT COUNT(CASE WHEN name IN ('comments','comment_rate_limits') THEN 1 END) AS base,COUNT(CASE WHEN name IN ('comment_links','comment_deletions') THEN 1 END) AS replies FROM sqlite_master WHERE type='table'").first();
+    if(schema?.base!==2)throw setup('COMMENTS_SCHEMA_NOT_READY','评论表未初始化：请在绑定的 lemoncat-comments 中执行 auth/migrations/0001_comments.sql，再执行 0002_comment_replies.sql。已有数据会保留。');
+    if(schema.replies===1)throw setup('COMMENTS_SCHEMA_NOT_READY','回复表未完整创建：请在绑定的 lemoncat-comments 中重新执行 auth/migrations/0002_comment_replies.sql。已有评论会保留。');
+    return await commentOperation(request,env.COMMENTS_DB,identity,slug,id,schema.replies===2);
   }catch(error){
     if(error instanceof PortalError)throw error;
     throw commentError(503,'评论暂时不可用，请稍后重试。','COMMENTS_UNAVAILABLE');
   }
 }
 
-
-// Reply relations are additive: existing comments and the original schema stay valid.
+// Both database versions share validation, identity, writes and pagination.
 const threadedCommentSelect='SELECT c.*,l.parent_id,l.root_id,d.deleted_at,p.author_login AS reply_author,pd.deleted_at AS parent_deleted FROM comments c LEFT JOIN comment_links l ON l.comment_id=c.id LEFT JOIN comment_deletions d ON d.comment_id=c.id LEFT JOIN comments p ON p.id=l.parent_id AND p.article_slug=c.article_slug LEFT JOIN comment_deletions pd ON pd.comment_id=p.id ';
 function threadView(row,identity){
- const view=commentView(row,identity);
- return {...view,rootId:row.root_id||row.id,parentId:row.parent_id||null,replyTo:row.parent_id?{id:row.parent_id,author:row.parent_deleted||!row.reply_author?'已删除的评论':row.reply_author}:null,deleted:Boolean(row.deleted_at),
-  ...(row.deleted_at?{body:'该评论已删除。',author:'',avatar:'/assets/images/favicon.svg',canEdit:false,canDelete:false}:{})};
+  return {...commentView(row,identity),rootId:row.root_id||row.id,parentId:row.parent_id||null,replyTo:row.parent_id?{id:row.parent_id,author:row.parent_deleted||!row.reply_author?'已删除的评论':row.reply_author}:null,deleted:Boolean(row.deleted_at),
+    ...(row.deleted_at?{body:'该评论已删除。',author:'',avatar:'/assets/images/favicon.svg',canEdit:false,canDelete:false}:{})};
 }
 function threadCursor(raw,root){
- if(!raw)return null;let cursor;try{cursor=JSON.parse(new TextDecoder().decode(unb64(raw)));}catch{}
- if(!Array.isArray(cursor)||cursor.length!==(root?3:2)||!Number.isSafeInteger(cursor[0])||cursor[0]<0||!commentId(cursor[1])||(root&&cursor[2]!==root))throw new PortalError(400,'评论分页地址无效，请刷新。');
- return cursor;
+  if(!raw)return null;let cursor;try{cursor=JSON.parse(new TextDecoder().decode(unb64(raw)));}catch{}
+  if(!Array.isArray(cursor)||cursor.length!==(root?3:2)||!Number.isSafeInteger(cursor[0])||cursor[0]<0||!commentId(cursor[1])||(root&&cursor[2]!==root))throw new PortalError(400,'评论分页地址无效，请刷新。');
+  return cursor;
 }
 const nextCommentCursor=(rows,size,root)=>rows.length>size?b64(encoder.encode(JSON.stringify([rows[size-1].created_at,rows[size-1].id,...(root?[root]:[])]))):null;
-async function handleThreadedComments(request,db,identity,slug,id){
- const url=new URL(request.url),method=request.method,actor=actorId(identity),size=20;
- const read=id=>db.prepare(threadedCommentSelect+'WHERE c.id=?1 AND c.article_slug=?2').bind(id,slug).first();
- const replyQuery=(root,cursor,limit)=>db.prepare(threadedCommentSelect+'WHERE c.article_slug=?1 AND l.root_id=?2 AND d.comment_id IS NULL '+(cursor?'AND (c.created_at>?3 OR (c.created_at=?3 AND c.id>?4)) ':'')+'ORDER BY c.created_at ASC,c.id ASC LIMIT ?'+(cursor?5:3)).bind(slug,root,...(cursor?[cursor[0],cursor[1]]:[]),limit);
- if(!id&&method==='GET'){
-  const root=url.searchParams.get('thread');if(root&&!commentId(root))throw new PortalError(400,'回复地址无效。');
-  const cursor=threadCursor(url.searchParams.get('cursor'),root);
-  if(root){
-   const parent=await read(root);if(!parent||parent.parent_id)throw new PortalError(404,'没有找到这段讨论。');
-   const [page,count]=await db.batch([replyQuery(root,cursor,size+1),db.prepare('SELECT COUNT(*) AS total FROM comments c JOIN comment_links l ON l.comment_id=c.id LEFT JOIN comment_deletions d ON d.comment_id=c.id WHERE c.article_slug=?1 AND l.root_id=?2 AND d.comment_id IS NULL').bind(slug,root)]);
-   return {status:200,data:{items:page.results.slice(0,size).map(row=>threadView(row,identity)),total:count.results[0].total,nextCursor:nextCommentCursor(page.results,size,root),repliesSupported:true}};
+async function commentOperation(request,db,identity,slug,id,replies){
+  const url=new URL(request.url),method=request.method,actor=actorId(identity),size=20;
+  const select=replies?threadedCommentSelect:'SELECT c.* FROM comments c ';
+  const view=row=>replies?threadView(row,identity):commentView(row,identity);
+  const read=(id,global=false)=>db.prepare(select+'WHERE c.id=?1'+(global?'':' AND c.article_slug=?2')).bind(id,...(global?[]:[slug])).first();
+  const replyQuery=(root,cursor,limit)=>db.prepare(select+'WHERE c.article_slug=?1 AND l.root_id=?2 AND d.comment_id IS NULL '+(cursor?'AND (c.created_at>?3 OR (c.created_at=?3 AND c.id>?4)) ':'')+'ORDER BY c.created_at ASC,c.id ASC LIMIT ?'+(cursor?5:3)).bind(slug,root,...(cursor?[cursor[0],cursor[1]]:[]),limit);
+  if(!id&&method==='GET'){
+    const root=url.searchParams.get('thread');
+    if(root&&!replies)throw commentError(503,'回复暂未开放，请稍后再试。','COMMENTS_REPLIES_NOT_CONFIGURED');
+    if(root&&!commentId(root))throw new PortalError(400,'回复地址无效。');
+    const cursor=threadCursor(url.searchParams.get('cursor'),root);
+    if(root){
+      const parent=await read(root);if(!parent||parent.parent_id)throw new PortalError(404,'没有找到这段讨论。');
+      const [page,count]=await db.batch([replyQuery(root,cursor,size+1),db.prepare('SELECT COUNT(*) AS total FROM comments c JOIN comment_links l ON l.comment_id=c.id LEFT JOIN comment_deletions d ON d.comment_id=c.id WHERE c.article_slug=?1 AND l.root_id=?2 AND d.comment_id IS NULL').bind(slug,root)]);
+      return {status:200,data:{items:page.results.slice(0,size).map(view),total:count.results[0].total,nextCursor:nextCommentCursor(page.results,size,root),repliesSupported:true}};
+    }
+    const activeReplies='SELECT COUNT(*) FROM comments r JOIN comment_links rl ON rl.comment_id=r.id LEFT JOIN comment_deletions rd ON rd.comment_id=r.id WHERE r.article_slug=c.article_slug AND rl.root_id=c.id AND rd.comment_id IS NULL';
+    const rootsSelect=replies?select.replace('SELECT c.*,','SELECT c.*,('+activeReplies+') AS reply_count,'):select;
+    const statement=db.prepare(rootsSelect+'WHERE c.article_slug=?1 '+(replies?'AND l.comment_id IS NULL AND (d.comment_id IS NULL OR ('+activeReplies+')>0) ':'')+(cursor?'AND (c.created_at<?2 OR (c.created_at=?2 AND c.id<?3)) ':'')+'ORDER BY c.created_at DESC,c.id DESC LIMIT ?'+(cursor?4:2)).bind(slug,...(cursor?[cursor[0],cursor[1]]:[]),size+1);
+    const [page,count]=await db.batch([statement,db.prepare('SELECT COUNT(*) AS total FROM comments c '+(replies?'LEFT JOIN comment_deletions d ON d.comment_id=c.id ':'')+'WHERE c.article_slug=?1'+(replies?' AND d.comment_id IS NULL':'')).bind(slug)]);
+    const roots=page.results.slice(0,size),previews=replies&&roots.length?await db.batch(roots.map(row=>replyQuery(row.id,null,4))):[];
+    return {status:200,data:{items:roots.map((row,i)=>({...view(row),...(replies?{replyCount:row.reply_count,replies:previews[i].results.slice(0,3).map(view),nextRepliesCursor:nextCommentCursor(previews[i].results,3,row.id)}:{})})),total:count.results[0].total,nextCursor:nextCommentCursor(page.results,size),repliesSupported:replies}};
   }
-  const activeReplies='SELECT COUNT(*) FROM comments r JOIN comment_links rl ON rl.comment_id=r.id LEFT JOIN comment_deletions rd ON rd.comment_id=r.id WHERE r.article_slug=c.article_slug AND rl.root_id=c.id AND rd.comment_id IS NULL';
-  const select=threadedCommentSelect.replace('SELECT c.*,','SELECT c.*,('+activeReplies+') AS reply_count,');
-  const statement=db.prepare(select+'WHERE c.article_slug=?1 AND l.comment_id IS NULL AND (d.comment_id IS NULL OR ('+activeReplies+')>0) '+(cursor?'AND (c.created_at<?2 OR (c.created_at=?2 AND c.id<?3)) ':'')+'ORDER BY c.created_at DESC,c.id DESC LIMIT ?'+(cursor?4:2)).bind(slug,...(cursor?[cursor[0],cursor[1]]:[]),size+1);
-  const [page,count]=await db.batch([statement,db.prepare('SELECT COUNT(*) AS total FROM comments c LEFT JOIN comment_deletions d ON d.comment_id=c.id WHERE c.article_slug=?1 AND d.comment_id IS NULL').bind(slug)]);
-  const roots=page.results.slice(0,size),previews=roots.length?await db.batch(roots.map(row=>replyQuery(row.id,null,4))):[];
-  return {status:200,data:{items:roots.map((row,i)=>({...threadView(row,identity),replyCount:row.reply_count,replies:previews[i].results.slice(0,3).map(r=>threadView(r,identity)),nextRepliesCursor:nextCommentCursor(previews[i].results,3,row.id)})),total:count.results[0].total,nextCursor:nextCommentCursor(page.results,size),repliesSupported:true}};
- }
- if(!id&&method==='POST'){
-  const input=await commentInput(request);if(!commentId(input.requestId))throw new PortalError(400,'提交标识无效，请刷新后重试。');
-  const parentId=input.parentId??null;if(parentId!==null&&!commentId(parentId))throw new PortalError(400,'要回复的评论地址无效。');
-  if(parentId===input.requestId)throw new PortalError(400,'回复不能指向自己。');
-  const previous=await db.prepare(threadedCommentSelect+'WHERE c.id=?1').bind(input.requestId).first(),same=row=>row&&!row.deleted_at&&row.article_slug===slug&&row.author_id===actor&&row.body===input.body&&(row.parent_id||null)===parentId;
-  if(previous){if(!same(previous))throw new PortalError(409,'这次提交已经变化，请刷新后重试。');return {status:200,data:{item:threadView(previous,identity),created:false}};}
-  let rootId=null;
-  if(parentId){const parent=await read(parentId);if(!parent||parent.deleted_at)throw new PortalError(404,'要回复的评论已删除或不属于这篇文章。');rootId=parent.root_id||parent.id;const root=await read(rootId);if(!root||root.parent_id)throw new PortalError(404,'没有找到这段讨论。');}
-  const now=Date.now(),reservation=crypto.randomUUID();
-  const statements=[
-   db.prepare('INSERT INTO comment_rate_limits (author_id,reservation_id,last_post_at) VALUES (?1,?2,?3) ON CONFLICT(author_id) DO UPDATE SET reservation_id=excluded.reservation_id,last_post_at=excluded.last_post_at WHERE comment_rate_limits.last_post_at<=?4').bind(actor,reservation,now,now-20000),
-   db.prepare('INSERT INTO comments (id,article_slug,author_id,author_login,body,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?6 WHERE EXISTS (SELECT 1 FROM comment_rate_limits WHERE author_id=?3 AND reservation_id=?7) '+(parentId?'AND EXISTS (SELECT 1 FROM comments p LEFT JOIN comment_deletions d ON d.comment_id=p.id WHERE p.id=?8 AND p.article_slug=?2 AND d.comment_id IS NULL) AND EXISTS (SELECT 1 FROM comments WHERE id=?9 AND article_slug=?2) ':'')+'ON CONFLICT(id) DO NOTHING').bind(input.requestId,slug,actor,identity.user.login,input.body,now,reservation,...(parentId?[parentId,rootId]:[]))
-  ];
-  if(parentId)statements.push(db.prepare('INSERT INTO comment_links (comment_id,parent_id,root_id) SELECT ?1,?2,?3 FROM comments WHERE id=?1 AND article_slug=?4 AND author_id=?5 AND changes()=1 ON CONFLICT(comment_id) DO NOTHING').bind(input.requestId,parentId,rootId,slug,actor));
-  const results=await db.batch(statements),row=await read(input.requestId);
-  if(!results[1].meta.changes){if(same(row))return {status:200,data:{item:threadView(row,identity),created:false}};if(row)throw new PortalError(409,'提交标识已使用，请刷新后重试。');if(parentId){const parent=await read(parentId);if(!parent||parent.deleted_at)throw new PortalError(404,'要回复的评论已删除，请刷新。');}throw commentError(429,'评论发表得太快，请间隔 20 秒再试。','COMMENTS_RATE_LIMITED');}
-  return {status:201,data:{item:threadView(row,identity),created:true}};
- }
- const row=await read(id);if(!row||row.deleted_at)throw new PortalError(404,'评论已删除或不属于这篇文章。');
- if(method==='PATCH'){
-  if(row.author_id!==actor)throw new PortalError(403,'只能编辑自己的评论。');
-  const input=await commentInput(request);if(input.updatedAt!==row.updated_at)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
-  if(Object.hasOwn(input,'parentId')&&input.parentId!==(row.parent_id||null))throw new PortalError(400,'不能更改回复对象。');
-  const updated=Math.max(Date.now(),row.updated_at+1),result=await db.prepare('UPDATE comments SET body=?1,updated_at=?2 WHERE id=?3 AND article_slug=?4 AND author_id=?5 AND updated_at=?6 AND NOT EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?3)').bind(input.body,updated,id,slug,actor,input.updatedAt).run();
-  if(!result.meta.changes)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
-  return {status:200,data:{item:threadView({...row,body:input.body,updated_at:updated},identity)}};
- }
- if(identity.role!=='admin'&&row.author_id!==actor)throw new PortalError(403,'只能删除自己的评论。');
- const now=Math.max(Date.now(),row.updated_at+1);
- // Keep only an erased placeholder when other comments still refer to this row.
- await db.batch([
-  db.prepare('INSERT INTO comment_deletions (comment_id,deleted_at) SELECT ?1,?2 WHERE EXISTS (SELECT 1 FROM comments WHERE id=?1 AND article_slug=?3 AND (?4=1 OR author_id=?5)) AND EXISTS (SELECT 1 FROM comment_links WHERE parent_id=?1 OR root_id=?1) ON CONFLICT(comment_id) DO NOTHING').bind(id,now,slug,identity.role==='admin'?1:0,actor),
-  db.prepare('UPDATE comments SET body=?1,updated_at=?2 WHERE id=?3 AND article_slug=?4 AND (?5=1 OR author_id=?6) AND EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?3)').bind('该评论已删除。',now,id,slug,identity.role==='admin'?1:0,actor),
-  db.prepare('DELETE FROM comments WHERE id=?1 AND article_slug=?2 AND (?3=1 OR author_id=?4) AND NOT EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?1)').bind(id,slug,identity.role==='admin'?1:0,actor),
-  db.prepare('DELETE FROM comment_links WHERE comment_id=?1 AND NOT EXISTS (SELECT 1 FROM comments WHERE id=?1)').bind(id)
- ]);
- const remaining=await read(id);return {status:200,data:{deleted:true,...(remaining&&!remaining.parent_id?{item:threadView(remaining,identity)}:{})}};
+  if(!id&&method==='POST'){
+    const input=await commentInput(request),parentId=input.parentId??null;
+    if(parentId&&!replies)throw commentError(503,'回复暂未开放，请稍后再试。','COMMENTS_REPLIES_NOT_CONFIGURED');
+    if(!commentId(input.requestId))throw new PortalError(400,'提交标识无效，请刷新后重试。');
+    if(parentId!==null&&!commentId(parentId))throw new PortalError(400,'要回复的评论地址无效。');
+    if(parentId===input.requestId)throw new PortalError(400,'回复不能指向自己。');
+    const previous=await read(input.requestId,true),same=row=>row&&!row.deleted_at&&row.article_slug===slug&&row.author_id===actor&&row.body===input.body&&(row.parent_id||null)===parentId;
+    if(previous){if(!same(previous))throw new PortalError(409,'这次提交已经变化，请刷新后重试。');return {status:200,data:{item:view(previous),created:false}};}
+    let rootId=null;
+    if(parentId){
+      const parent=await read(parentId);if(!parent||parent.deleted_at)throw new PortalError(404,'要回复的评论已删除或不属于这篇文章。');
+      rootId=parent.root_id||parent.id;const root=await read(rootId);if(!root||root.parent_id)throw new PortalError(404,'没有找到这段讨论。');
+    }
+    const now=Date.now(),reservation=crypto.randomUUID();
+    const statements=[
+      db.prepare('INSERT INTO comment_rate_limits (author_id,reservation_id,last_post_at) VALUES (?1,?2,?3) ON CONFLICT(author_id) DO UPDATE SET reservation_id=excluded.reservation_id,last_post_at=excluded.last_post_at WHERE comment_rate_limits.last_post_at<=?4').bind(actor,reservation,now,now-20000),
+      db.prepare('INSERT INTO comments (id,article_slug,author_id,author_login,body,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?6 WHERE EXISTS (SELECT 1 FROM comment_rate_limits WHERE author_id=?3 AND reservation_id=?7) '+(parentId?'AND EXISTS (SELECT 1 FROM comments p LEFT JOIN comment_deletions d ON d.comment_id=p.id WHERE p.id=?8 AND p.article_slug=?2 AND d.comment_id IS NULL) AND EXISTS (SELECT 1 FROM comments WHERE id=?9 AND article_slug=?2) ':'')+'ON CONFLICT(id) DO NOTHING').bind(input.requestId,slug,actor,identity.user.login,input.body,now,reservation,...(parentId?[parentId,rootId]:[]))
+    ];
+    if(parentId)statements.push(db.prepare('INSERT INTO comment_links (comment_id,parent_id,root_id) SELECT ?1,?2,?3 FROM comments WHERE id=?1 AND article_slug=?4 AND author_id=?5 AND changes()=1 ON CONFLICT(comment_id) DO NOTHING').bind(input.requestId,parentId,rootId,slug,actor));
+    const results=await db.batch(statements),row=await read(input.requestId);
+    if(!results[1].meta.changes){
+      if(same(row))return {status:200,data:{item:view(row),created:false}};
+      if(row)throw new PortalError(409,'提交标识已使用，请刷新后重试。');
+      if(parentId){const parent=await read(parentId);if(!parent||parent.deleted_at)throw new PortalError(404,'要回复的评论已删除，请刷新。');}
+      throw commentError(429,'评论发表得太快，请间隔 20 秒再试。','COMMENTS_RATE_LIMITED');
+    }
+    return {status:201,data:{item:view(row),created:true}};
+  }
+  const row=await read(id);if(!row||row.deleted_at)throw new PortalError(404,'评论已删除或不属于这篇文章。');
+  if(method==='PATCH'){
+    if(row.author_id!==actor)throw new PortalError(403,'只能编辑自己的评论。');
+    const input=await commentInput(request);if(input.updatedAt!==row.updated_at)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
+    if(Object.hasOwn(input,'parentId')&&input.parentId!==(row.parent_id||null))throw new PortalError(400,'不能更改回复对象。');
+    const updated=Math.max(Date.now(),row.updated_at+1);
+    const result=await db.prepare('UPDATE comments SET body=?1,updated_at=?2 WHERE id=?3 AND article_slug=?4 AND author_id=?5 AND updated_at=?6'+(replies?' AND NOT EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?3)':'')).bind(input.body,updated,id,slug,actor,input.updatedAt).run();
+    if(!result.meta.changes)throw new PortalError(409,'评论已变化，请刷新后再编辑。');
+    return {status:200,data:{item:view({...row,body:input.body,updated_at:updated})}};
+  }
+  if(identity.role!=='admin'&&row.author_id!==actor)throw new PortalError(403,'只能删除自己的评论。');
+  const remove=db.prepare('DELETE FROM comments WHERE id=?1 AND article_slug=?2 AND (?3=1 OR author_id=?4)'+(replies?' AND NOT EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?1)':'')).bind(id,slug,identity.role==='admin'?1:0,actor);
+  if(!replies){await remove.run();return {status:200,data:{deleted:true}};}
+  const now=Math.max(Date.now(),row.updated_at+1);
+  // Erase the text but preserve other authors' replies.
+  await db.batch([
+    db.prepare('INSERT INTO comment_deletions (comment_id,deleted_at) SELECT ?1,?2 WHERE EXISTS (SELECT 1 FROM comments WHERE id=?1 AND article_slug=?3 AND (?4=1 OR author_id=?5)) AND EXISTS (SELECT 1 FROM comment_links WHERE parent_id=?1 OR root_id=?1) ON CONFLICT(comment_id) DO NOTHING').bind(id,now,slug,identity.role==='admin'?1:0,actor),
+    db.prepare('UPDATE comments SET body=?1,updated_at=?2 WHERE id=?3 AND article_slug=?4 AND (?5=1 OR author_id=?6) AND EXISTS (SELECT 1 FROM comment_deletions WHERE comment_id=?3)').bind('该评论已删除。',now,id,slug,identity.role==='admin'?1:0,actor),
+    remove,
+    db.prepare('DELETE FROM comment_links WHERE comment_id=?1 AND NOT EXISTS (SELECT 1 FROM comments WHERE id=?1)').bind(id)
+  ]);
+  const remaining=await read(id);return {status:200,data:{deleted:true,...(remaining&&!remaining.parent_id?{item:view(remaining)}:{})}};
 }
 
 // Server-owned metadata, staging authors and deployment evidence.

@@ -64,7 +64,7 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
   function setBusy(value){busy=value;sync();root.setAttribute('aria-busy',String(value));}
   function failure(error){
     if(error.status===401){ready=false;if(form)form.hidden=true;status.replaceChildren(document.createTextNode('登录已失效，重新登录后再参与讨论。 '),loginLink());}
-    else if((error.status===404&&error.message==='接口不存在。')||error.code==='COMMENTS_NOT_CONFIGURED'){ready=false;if(form)form.hidden=true;status.textContent='评论尚未开放，请稍后再来。';}
+    else if((error.status===404&&error.message==='接口不存在。')||['COMMENTS_NOT_CONFIGURED','COMMENTS_SCHEMA_NOT_READY'].includes(error.code)){ready=false;if(form)form.hidden=true;status.textContent=error.code?error.message:'评论尚未开放，请稍后再来。';}
     else if(error.code==='COMMENTS_REPLIES_NOT_CONFIGURED'){repliesSupported=false;replyNotice.hidden=false;status.textContent=error.message;}
     else status.textContent=error.message==='Failed to fetch'?'评论加载失败，请检查网络后重试。':error.message;
   }

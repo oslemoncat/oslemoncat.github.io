@@ -111,3 +111,42 @@ test('Database errors are actionable and never leak SQL details',async t=>{
  const f=fixture(t);const broken={prepare(){throw Error('SQL failure: private detail');},batch(){throw Error('private detail');}};
  const r=await f.run(request(),{COMMENTS_DB:broken});assert.equal(r.status,503);const text=await r.text();assert.match(text,/COMMENTS_UNAVAILABLE/);assert.ok(!text.includes('private detail'));
 });
+
+test('Administrators see the missing binding while members receive the public availability message',async t=>{
+ const f=fixture(t);
+ const member=await (await f.run(request(),{COMMENTS_DB:undefined})).json();
+ assert.equal(member.message,'评论尚未开放，请稍后再来。');
+ f.identity(11,'oslemoncat',true);
+ const admin=await (await f.run(request(),{COMMENTS_DB:undefined})).json();
+ assert.equal(admin.code,'COMMENTS_NOT_CONFIGURED');assert.match(admin.message,/COMMENTS_DB.*lemoncat-comments/);
+});
+test('Missing base tables identify the existing initialization steps without writing to the database',async t=>{
+ for(const table of ['comments','comment_rate_limits']){
+  const f=fixture(t);f.sqlite.exec('DROP TABLE '+table);f.identity(11,'oslemoncat',true);
+  const response=await f.run(request()),data=await response.json();
+  assert.equal(response.status,503);assert.equal(data.code,'COMMENTS_SCHEMA_NOT_READY');assert.match(data.message,/0001_comments.sql.*0002_comment_replies.sql/);
+  assert.ok(f.sqlCalls.every(sql=>sql.startsWith('SELECT ')));
+  f.identity();const member=await (await f.run(request())).json();assert.equal(member.message,'评论尚未开放，请稍后再来。');
+ }
+});
+test('Partial reply migration blocks mutations and preserves every existing comment and relation',async t=>{
+ const f=fixture(t),root=f.seed(),child=f.seed({parent:root});f.sqlite.exec('DROP TABLE comment_deletions');f.identity(11,'oslemoncat',true);
+ for(const req of [request(),request(route,'POST',post()),request(route+'/'+root,'DELETE'),request(route+'/'+root,'PATCH',{body:'change',updatedAt:0})]){
+  const response=await f.run(req),data=await response.json();assert.equal(response.status,503);assert.equal(data.code,'COMMENTS_SCHEMA_NOT_READY');assert.match(data.message,/0002_comment_replies.sql/);
+ }
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM comments').get().n,2);
+ assert.equal(f.sqlite.prepare('SELECT parent_id FROM comment_links WHERE comment_id=?').get(child).parent_id,root);
+});
+test('The shared handler preserves legacy pagination, retry, editing and numeric-ID delete permissions',async t=>{
+ const f=fixture(t,{legacy:true}),input=post('legacy');
+ const created=await (await f.run(request(route,'POST',input))).json();assert.equal(created.created,true);
+ assert.equal((await (await f.run(request(route,'POST',input))).json()).created,false);
+ f.identity(22,'member');assert.equal((await f.run(request(route+'/'+input.requestId,'DELETE'))).status,403);
+ f.identity();assert.equal((await f.run(request(route+'/'+input.requestId,'PATCH',{body:'updated',updatedAt:created.item.updatedAt}))).status,200);
+ assert.equal((await f.run(request(route+'/'+input.requestId,'PATCH',{body:'stale',updatedAt:created.item.updatedAt}))).status,409);
+ for(let i=0;i<22;i++)f.seed({created:100});
+ const first=await (await f.run(request())).json(),second=await (await f.run(request(route+'?cursor='+encodeURIComponent(first.nextCursor)))).json();
+ assert.equal(first.repliesSupported,false);assert.equal(first.total,23);assert.equal(new Set([...first.items,...second.items].map(x=>x.id)).size,23);
+ assert.equal((await f.run(request(route+'/'+input.requestId,'DELETE'))).status,200);
+ assert.equal((await f.run(request(route,'POST',post('cooldown')))).status,429);
+});

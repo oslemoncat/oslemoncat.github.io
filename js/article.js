@@ -6,7 +6,7 @@ import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?
 import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261012-comment-replies';
 import {api} from '../assets/js/auth.js?v=20261012-comment-replies';
 
-import {createComments} from './comments.js?v=20261012-comment-replies';
+import {createComments} from './comments.js?v=20261015-comment-status';
 
 import {createFilePreview} from '../assets/js/preview.js?v=20261012-comment-replies';
 
