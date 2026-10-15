@@ -1,5 +1,6 @@
-import {el} from '../assets/js/util.js?v=20261015-catalog';
-import {api} from '../assets/js/auth.js?v=20261015-catalog';
+import {el} from '../assets/js/util.js?v=20261015-protection';
+import {api} from '../assets/js/auth.js?v=20261015-protection';
+import {createHumanCheck} from '../assets/js/turnstile.js?v=20261015-protection';
 
 export function createComments(article,user=window.__LEMONCAT_USER__){
   const endpoint='/api/articles/'+encodeURIComponent(article.slug)+'/comments';
@@ -10,6 +11,8 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
   const replyNotice=el('p',{class:'field-hint',text:'回复功能暂未开放。',hidden:true});
   const list=el('ol',{class:'comments-list','aria-label':'文章评论'}),more=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'加载更多',hidden:true});
   let items=[],total=0,next=null,ready=false,busy=false,editing=null,replying=null,repliesSupported=false;
+  let security=null,cooldownUntil=0,cooldownTimer;
+  const securityHint=el('p',{class:'field-hint comment-security',role:'status'}),human=user?createHumanCheck(user,()=>sync()):null;
   let form,body,submit,counter,label,cancelReply,requestId=crypto.randomUUID(),submittedBody='';
   const draftBase='lemoncat-comment-draft:'+user?.id+':'+article.slug;
   const draftKey=()=>draftBase+(replying?':reply:'+replying.id:'');
@@ -19,7 +22,7 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
     counter.textContent=body.value.length+' / 2000';sync();
   }
   function setTarget(item){
-    if(busy||editing)return;remember();replying=item;requestId=crypto.randomUUID();submittedBody='';
+    if(busy||editing||security?.muted)return;remember();replying=item;requestId=crypto.randomUUID();submittedBody='';
     try{body.value=(localStorage.getItem(draftKey())||'').slice(0,2000);}catch{body.value='';}
     label.textContent=item?'回复 @'+item.author:'以 '+user.login+' 的身份评论';
     submit.textContent=item?'发送回复':'发表评论';cancelReply.hidden=!item;remember();
@@ -33,14 +36,14 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
     label=el('label',{class:'comment-label','for':body.id,text:'以 '+user.login+' 的身份评论'});
     cancelReply=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'取消回复',hidden:true});
     cancelReply.addEventListener('click',()=>setTarget(null));
-    const hint=el('p',{id:'comment-hint-'+article.slug,class:'field-hint',text:'评论会公开展示，请友善交流。'});
+    const hint=el('p',{id:'comment-hint-'+article.slug,class:'field-hint',text:'评论公开展示；评论和回复共用 20 秒发送间隔。'});
     form=el('form',{class:'comment-form'},[label,body,el('div',{class:'comment-form-footer'},[hint,counter,cancelReply,submit])]);
     body.addEventListener('input',()=>{if(submittedBody&&submittedBody!==body.value.trim()){requestId=crypto.randomUUID();submittedBody='';}remember();});remember();
     form.addEventListener('submit',async event=>{
-      event.preventDefault();if(busy||!ready||editing||!body.value.trim())return;
+      event.preventDefault();if(busy||!ready||editing||!security?.ready||security.muted||Date.now()<cooldownUntil||!human.value()||!body.value.trim())return;
       const text=body.value.trim(),target=replying;submittedBody=text;setBusy(true);status.textContent=target?'正在发送回复…':'正在发表…';
       try{
-        const result=await api(endpoint,{method:'POST',body:{body:text,requestId,...(target?{parentId:target.id}:{})}});
+        const result=await api(endpoint,{method:'POST',body:{body:text,requestId,turnstileToken:human.value(),...(target?{parentId:target.id}:{})}});
         if(!root.isConnected)return;
         if(target&&result.item.parentId!==target.id)throw new Error('回复暂未启用，请刷新后查看这次提交，再决定是否重试。');
         const existing=items.some(row=>row.id===result.item.id||row.replies?.some(reply=>reply.id===result.item.id));
@@ -48,21 +51,30 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
           const parent=items.find(row=>row.id===result.item.rootId);
           if(parent){parent.replies=sortReplies([...(parent.replies||[]).filter(row=>row.id!==result.item.id),result.item]);parent.replyCount=Math.max(parent.replies.length,(parent.replyCount||0)+(existing?0:1));}
         }else items=[{replies:[],replyCount:0,...result.item},...items.filter(row=>row.id!==result.item.id)];
-        total=Math.max(0,total+(existing?0:1));body.value='';submittedBody='';requestId=crypto.randomUUID();remember();draw();
+        setCooldown(result.retryAfter??20);total=Math.max(0,total+(existing?0:1));body.value='';submittedBody='';requestId=crypto.randomUUID();remember();draw();
         status.textContent=target?'回复已发表。':'评论已发表。';body.focus({preventScroll:true});
-      }catch(error){failure(error);}finally{setBusy(false);}
+      }catch(error){failure(error);}finally{human.reset();setBusy(false);}
     });root.append(form);
   }else{refresh.hidden=true;root.append(el('p',{class:'field-hint',text:'登录后可以查看和发表评论。'}),loginLink());}
-  root.append(replyNotice,status,list,more);
+  root.append(...[securityHint,human?.element,moderationPanel(),replyNotice,status,list,more].filter(Boolean));
+  function setCooldown(seconds){
+    cooldownUntil=Date.now()+Math.max(0,Number(seconds)||0)*1000;clearInterval(cooldownTimer);sync();
+    if(seconds>0)cooldownTimer=setInterval(()=>{if(!root.isConnected||Date.now()>=cooldownUntil)clearInterval(cooldownTimer);if(root.isConnected)sync();},500);
+  }
   function sync(){
     refresh.disabled=busy||Boolean(editing);more.disabled=busy||Boolean(editing);
-    if(submit)submit.disabled=busy||!ready||Boolean(editing)||!body?.value.trim();
+    const seconds=Math.max(0,Math.ceil((cooldownUntil-Date.now())/1000));
+    if(submit){submit.disabled=busy||!ready||Boolean(editing)||!body?.value.trim()||!security?.ready||security?.muted||seconds>0||!human?.value();submit.textContent=seconds?'等待 '+seconds+' 秒':replying?'发送回复':'发表评论';}
+    securityHint.textContent=security?.message||(seconds?'再次发送还需 '+seconds+' 秒。':'评论和回复共用 20 秒发送间隔。');
     if(body)body.disabled=busy||!ready||Boolean(editing);if(cancelReply)cancelReply.disabled=busy||!ready||Boolean(editing);
-    for(const button of root.querySelectorAll('[data-comment-action]'))button.disabled=busy||!ready||(Boolean(editing)&&!['save','cancel'].includes(button.dataset.commentAction));
+    for(const button of root.querySelectorAll('[data-comment-action]'))button.disabled=busy||!ready||(Boolean(editing)&&!['save','cancel'].includes(button.dataset.commentAction))||(['reply','edit','save'].includes(button.dataset.commentAction)&&Boolean(security?.muted))||(button.dataset.commentAction==='save'&&(!security?.ready||!human?.value()));
     for(const input of root.querySelectorAll('.comment-edit-form textarea'))input.disabled=busy;
   }
   function setBusy(value){busy=value;sync();root.setAttribute('aria-busy',String(value));}
   function failure(error){
+    if(error.retryAfter)setCooldown(error.retryAfter);
+    if(error.code==='COMMENTS_MUTED'&&security){security.muted=true;security.message=error.message;}
+    if(error.code==='COMMENTS_PROTECTION_NOT_READY'&&security){security.ready=false;security.message=error.message;}
     if(error.status===401){ready=false;if(form)form.hidden=true;status.replaceChildren(document.createTextNode('登录已失效，重新登录后再参与讨论。 '),loginLink());}
     else if((error.status===404&&error.message==='接口不存在。')||['COMMENTS_NOT_CONFIGURED','COMMENTS_SCHEMA_NOT_READY'].includes(error.code)){ready=false;if(form)form.hidden=true;status.textContent=error.code?error.message:'评论尚未开放，请稍后再来。';}
     else if(error.code==='COMMENTS_REPLIES_NOT_CONFIGURED'){repliesSupported=false;replyNotice.hidden=false;status.textContent=error.message;}
@@ -86,6 +98,10 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
       const edit=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'编辑','data-comment-action':'edit','aria-label':'编辑 '+item.author+' 的评论'});
       edit.addEventListener('click',()=>{if(busy||editing)return;editing=item.id;draw();});actions.append(edit);
     }
+    if(item.canMute){const mute=el('button',{type:'button',class:'btn btn--ghost comment-button danger',text:'禁言','data-comment-action':'mute','aria-label':'禁言 '+item.author});
+      let confirming=false;const cancel=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'取消禁言',hidden:true,'data-comment-action':'cancel-mute'});
+      const reset=()=>{confirming=false;mute.textContent='禁言';cancel.hidden=true;};cancel.addEventListener('click',reset);
+      mute.addEventListener('click',async()=>{if(busy||editing)return;if(!confirming){confirming=true;mute.textContent='确认禁言';cancel.hidden=false;status.textContent='禁言 @'+item.author+' 后，该账号无法发表评论、回复或编辑，管理员可随时解除。';return;}setBusy(true);try{await api('/api/comment-mutes',{method:'POST',body:{slug:article.slug,commentId:item.id}});status.textContent='已禁言 @'+item.author+'。可在“禁言管理”中解除。';}catch(error){failure(error);}finally{reset();setBusy(false);}});actions.append(mute,cancel);}
     if(item.canDelete){
       const remove=el('button',{type:'button',class:'btn btn--ghost comment-button danger',text:'删除','data-comment-action':'delete','aria-label':'删除 '+item.author+' 的评论'});
       remove.addEventListener('click',async()=>{
@@ -114,9 +130,9 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
       const editor=el('form',{class:'comment-edit-form'},[input,el('div',{class:'comment-edit-actions'},[save,cancel])]);
       cancel.addEventListener('click',()=>{if(busy)return;editing=null;draw();});
       editor.addEventListener('submit',async event=>{
-        event.preventDefault();if(busy||!input.value.trim())return;setBusy(true);status.textContent='正在保存…';
-        try{const result=await api(endpoint+'/'+item.id,{method:'PATCH',body:{body:input.value.trim(),updatedAt:item.updatedAt}});if(!root.isConnected)return;updateItem(result.item);editing=null;draw();status.textContent='评论已更新。';}
-        catch(error){failure(error);}finally{setBusy(false);}
+        event.preventDefault();if(busy||!input.value.trim()||!security?.ready||security.muted||!human?.value())return;setBusy(true);status.textContent='正在保存…';
+        try{const result=await api(endpoint+'/'+item.id,{method:'PATCH',body:{body:input.value.trim(),updatedAt:item.updatedAt,turnstileToken:human.value()}});if(!root.isConnected)return;updateItem(result.item);editing=null;draw();status.textContent='评论已更新。';}
+        catch(error){failure(error);}finally{human.reset();setBusy(false);}
       });row.append(editor);queueMicrotask(()=>input.focus({preventScroll:true}));
     }else row.append(el('p',{class:'comment-body',text:item.body}));
     if(thread&&(item.replyCount||item.replies?.length)){
@@ -132,6 +148,26 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
       }
     }return row;
   }
+  function moderationPanel(){
+    if(user?.role!=='admin')return null;
+    const panel=el('details',{class:'comment-moderation'}),summary=el('summary',{text:'禁言管理'}),rows=el('div'),notice=el('p',{class:'field-hint',role:'status'}),more=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'加载更多禁言',hidden:true});let next=null,loading=false;
+    panel.append(summary,notice,rows,more);
+    async function update(append=false){
+      if(loading)return;loading=true;more.disabled=true;notice.textContent='正在加载禁言名单…';
+      try{
+        const data=await api('/api/comment-mutes'+(append&&next?'?after='+encodeURIComponent(next):''));if(!root.isConnected)return;
+        if(!append)rows.replaceChildren();next=data.next;more.hidden=!next;
+        for(const item of data.items){
+          const remove=el('button',{type:'button',class:'btn btn--ghost comment-button',text:'解除禁言','aria-label':'解除 '+item.login+' 的禁言'});
+          const row=el('div',{class:'comment-mute-row'},[el('span',{text:item.login+' · '+time(item.createdAt)}),remove]);
+          remove.addEventListener('click',async()=>{remove.disabled=true;try{await api('/api/comment-mutes/'+encodeURIComponent(item.id.slice(7)),{method:'DELETE'});row.remove();notice.textContent='已解除 @'+item.login+' 的禁言。';}catch(error){notice.textContent=error.message;remove.disabled=false;}});
+          rows.append(row);
+        }
+        notice.textContent=rows.children.length?'禁言对整个评论区生效，解除后恢复发言。':'当前没有被禁言的账号。';
+      }catch(error){notice.textContent=error.message;}finally{loading=false;more.disabled=false;}
+    }
+    panel.addEventListener('toggle',()=>{if(panel.open)update();});more.addEventListener('click',()=>update(true));return panel;
+  }
   async function load(append=false){
     if(busy||editing||!user)return;setBusy(true);status.textContent='正在加载评论…';
     try{
@@ -139,7 +175,8 @@ export function createComments(article,user=window.__LEMONCAT_USER__){
       const rows=result.items.map(item=>({replies:[],replyCount:0,...item}));
       items=append?[...items,...rows.filter(item=>!items.some(value=>value.id===item.id))]:rows;
       total=result.total;next=result.nextCursor;repliesSupported=result.repliesSupported===true;replyNotice.hidden=repliesSupported;
-      ready=true;if(form)form.hidden=false;draw();status.textContent='';
+      security=result.security||{ready:false,message:'后台尚未更新评论防护，请稍后再试。'};
+      setCooldown(security.retryAfter||0);human?.configure(security);ready=true;if(form)form.hidden=false;draw();status.textContent='';
     }catch(error){failure(error);}finally{setBusy(false);}
   }
   refresh.addEventListener('click',()=>load());more.addEventListener('click',()=>load(true));queueMicrotask(()=>load());return root;

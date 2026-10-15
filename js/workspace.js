@@ -1,11 +1,11 @@
-import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261015-catalog';
-import {api,logout} from '../assets/js/auth.js?v=20261015-catalog';
-import {loadModules,loadArticles,loadArticleBody,loadTagHistory} from '../assets/js/content.js?v=20261015-catalog';
-import {renderMarkdown} from '../assets/js/markdown.js?v=20261015-catalog';
-import {pageHead} from '../assets/js/layout.js?v=20261015-catalog';
-import {createFilePreview} from '../assets/js/preview.js?v=20261015-catalog';
-import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-catalog';
-import {createPublicationStatus} from '../assets/js/publication.js?v=20261015-catalog';
+import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261015-protection';
+import {api,logout} from '../assets/js/auth.js?v=20261015-protection';
+import {loadModules,loadArticles,loadArticleBody,loadTagHistory} from '../assets/js/content.js?v=20261015-protection';
+import {renderMarkdown} from '../assets/js/markdown.js?v=20261015-protection';
+import {pageHead} from '../assets/js/layout.js?v=20261015-protection';
+import {createFilePreview} from '../assets/js/preview.js?v=20261015-protection';
+import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-protection';
+import {createPublicationStatus} from '../assets/js/publication.js?v=20261015-protection';
 const today=()=>new Date(Date.now()+8*3600_000).toISOString().slice(0,10);
 const labels={pending:'等待审核',approved:'审核通过',published:'审核通过',closed:'未通过'};
 function generatedPost(source){const match=/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);if(!match)throw new Error('无法读取稿件。');const post={body:match[2]};for(const line of match[1].split('\n')){const field=/^([a-z_]+):\s*(.*)$/.exec(line);if(field){try{post[field[1]]=JSON.parse(field[2]);}catch{post[field[1]]=field[2];}}}return post;}

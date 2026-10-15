@@ -17,7 +17,7 @@ test('Comments reject anonymous callers and other Origins before any write',asyn
 test('Author and role come from the verified account instead of client fields',async t=>{
  const f=fixture(t);const r=await f.run(request(route,'POST',{...post('你好\n第二行'),author:'oslemoncat',author_id:'github:11',role:'admin'}));
  assert.equal(r.status,201);const data=await r.json();assert.equal(data.item.author,'member');assert.equal(data.item.canEdit,true);
- assert.equal(f.sqlite.prepare('SELECT author_id FROM comments').get().author_id,'github:21');assert.ok(f.calls.every(c=>c.m==='GET'));
+ assert.equal(f.sqlite.prepare('SELECT author_id FROM comments').get().author_id,'github:21');assert.ok(f.calls.filter(c=>c.p!=='/turnstile/v0/siteverify').every(c=>c.m==='GET'));
 });
 test('Comment content is trimmed, bounded and stored as text using SQL parameters',async t=>{
  const f=fixture(t);const text="' ; DROP TABLE comments; --\n<script>alert(1)</script>";

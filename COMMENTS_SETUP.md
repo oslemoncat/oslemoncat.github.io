@@ -1,3 +1,5 @@
+> 2026-10-15：新增管理员禁言、20 秒倒计时和 Turnstile 人机验证。上线需执行 0003、配置两项 Turnstile Key 并更新 Worker，详见 [COMMENT_PROTECTION_SETUP.md](COMMENT_PROTECTION_SETUP.md)。
+
 > 2026-10-12：评论已加入回复功能。已有数据库请按 [COMMENT_REPLIES_SETUP.md](COMMENT_REPLIES_SETUP.md) 执行 0002 并更新 Worker；不需要删除或重建数据库。
 
 # 文章评论上线设置

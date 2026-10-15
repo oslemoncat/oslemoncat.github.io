@@ -1,6 +1,6 @@
 /* 布局与共享组件：页头、页脚、卡片、列表、分页、面包屑。 */
-import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261015-catalog';
-import { icon } from './theme.js?v=20261015-catalog';
+import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261015-protection';
+import { icon } from './theme.js?v=20261015-protection';
 
 /* ------------------------------------------------------------------ 页头 */
 export function renderHeader(site, activeSection = '', user = null) {

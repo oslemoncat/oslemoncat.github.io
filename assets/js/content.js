@@ -1,5 +1,5 @@
 /* 内容层：站点配置、模块、文章元数据与正文的加载与缓存。 */
-import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js?v=20261015-catalog';
+import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js?v=20261015-protection';
 
 const SITE_DEFAULT = {
   title: 'Lemoncat的喵喵屋',

@@ -1,9 +1,9 @@
-import {el,debounce} from '../assets/js/util.js?v=20261015-catalog';
-import {loadModules,loadArticles,loadSearchIndex,loadTagHistory,decorateModules} from '../assets/js/content.js?v=20261015-catalog';
-import {pageHead,articleList,emptyState,breadcrumbs} from '../assets/js/layout.js?v=20261015-catalog';
-import {matchArticle,searchExcerpt,mergeTagHistory,normalizeTags} from '../assets/js/catalog.js?v=20261015-catalog';
-import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-catalog';
-import {api} from '../assets/js/auth.js?v=20261015-catalog';
+import {el,debounce} from '../assets/js/util.js?v=20261015-protection';
+import {loadModules,loadArticles,loadSearchIndex,loadTagHistory,decorateModules} from '../assets/js/content.js?v=20261015-protection';
+import {pageHead,articleList,emptyState,breadcrumbs} from '../assets/js/layout.js?v=20261015-protection';
+import {matchArticle,searchExcerpt,mergeTagHistory,normalizeTags} from '../assets/js/catalog.js?v=20261015-protection';
+import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-protection';
+import {api} from '../assets/js/auth.js?v=20261015-protection';
 
 export async function renderArticles(container,params=new URLSearchParams(),options={}){
   const [modules,articles,index,registry]=await Promise.all([loadModules(),loadArticles(),loadSearchIndex(),loadTagHistory()]);

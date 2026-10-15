@@ -1,6 +1,6 @@
-import {el} from '../assets/js/util.js?v=20261015-catalog';
-import {loadSite,loadModules,loadArticles,decorateModules} from '../assets/js/content.js?v=20261015-catalog';
-import {sectionHead,moduleCard,articleList} from '../assets/js/layout.js?v=20261015-catalog';
+import {el} from '../assets/js/util.js?v=20261015-protection';
+import {loadSite,loadModules,loadArticles,decorateModules} from '../assets/js/content.js?v=20261015-protection';
+import {sectionHead,moduleCard,articleList} from '../assets/js/layout.js?v=20261015-protection';
 export async function renderHome(container){
  const [site,modules,articles]=await Promise.all([loadSite(),loadModules(),loadArticles()]);
  const announcements=articles.filter(article=>article.kind==='announcement'),notes=articles.filter(article=>article.kind!=='announcement');

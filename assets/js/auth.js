@@ -25,7 +25,7 @@ export async function api(path,options={}){
  }else response=await fetch(WORKER+path,{method:options.method||'GET',headers,...(body?{body}:{}),cache:'no-store'});
  let data;try{data=await response.json();}catch{throw new Error('登录服务需要升级，请先部署新版 Worker。');}
  if(response.status===401)localStorage.removeItem(KEY);
- if(!response.ok){const error=new Error(data.message||'操作未完成，请稍后重试。');Object.assign(error,{check:data.check,status:response.status,code:data.code});throw error;}
+ if(!response.ok){const error=new Error(data.message||'操作未完成，请稍后重试。');Object.assign(error,{check:data.check,status:response.status,code:data.code,retryAfter:data.retryAfter});throw error;}
  return data;
 }
 export async function restoreSession(){if(!token())return null;return api('/api/session');}

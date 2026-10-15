@@ -1,3 +1,5 @@
+> 2026-10-15：新增管理员禁言、20 秒倒计时和 Turnstile 人机验证。上线需执行 0003、配置两项 Turnstile Key 并更新 Worker，详见 [COMMENT_PROTECTION_SETUP.md](COMMENT_PROTECTION_SETUP.md)。
+
 # 评论回复更新（2026-10-12）
 
 欢迎登录页已去掉右上角重复的“登录”；登录后的头像与写作区入口保留。

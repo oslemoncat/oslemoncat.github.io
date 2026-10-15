@@ -15,7 +15,7 @@ test('Missing reply migration keeps ordinary comments working and rejects reply 
 test('Reply identity and root are derived on the server rather than supplied by a client',async t=>{
  const f=fixture(t),root=f.seed({author:22,login:'reader'});const r=await data(await f.run(request(route,'POST',{...reply(root),rootId:crypto.randomUUID(),author:'oslemoncat',role:'admin'})));
  assert.equal(r.status,201);assert.equal(r.item.author,'member');assert.equal(r.item.rootId,root);assert.equal(r.item.replyTo.author,'reader');assert.equal(r.item.canEdit,true);
- assert.equal(f.sqlite.prepare('SELECT author_id FROM comments WHERE id=?').get(r.item.id).author_id,'github:21');assert.ok(f.calls.every(x=>x.m==='GET'));
+ assert.equal(f.sqlite.prepare('SELECT author_id FROM comments WHERE id=?').get(r.item.id).author_id,'github:21');assert.ok(f.calls.filter(x=>x.p!=='/turnstile/v0/siteverify').every(x=>x.m==='GET'));
 });
 test('Replying to another reply retains one root and the actual addressed author',async t=>{
  const f=fixture(t),root=f.seed({author:22,login:'reader'}),child=f.seed({author:23,login:'other',parent:root});

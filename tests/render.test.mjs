@@ -132,7 +132,8 @@ check('文章列表页无错误提示',!/渲染出错|加载失败/.test(text())
 check('文章列表页出现分类筛选',content().querySelectorAll('.filter-chip').length>=8);
 const publishedIndex=JSON.parse(readFileSync(join(ROOT,'content/articles.json'),'utf8')).articles;
 check('文章列表只显示当前已发布内容',content().querySelectorAll('.list__item').length===publishedIndex.length);
-check('仅保留原营业公告',publishedIndex.length===1&&publishedIndex[0]==='lemoncat-noets');
+const announcementSlugs=publishedIndex.filter(slug=>JSON.parse(readFileSync(join(ROOT,'content/articles',slug+'.json'),'utf8')).kind==='announcement');
+check('营业公告保留且旧稿仍下架',publishedIndex.includes('lemoncat-noets')&&!publishedIndex.some(slug=>['111','apostol-sequence-limit','c-pointers-essentials','exercise','linear-algebra-vectors-and-planes','my-study-note','my-typescript-note','python-batch-docx'].includes(slug)));
 
 goto('#/search?q=柠檬味');await new Promise(r=>setTimeout(r,500));
 check('正文搜索框回填关键字',(content().querySelector('.search-input')||{}).value==='柠檬味');
@@ -141,7 +142,7 @@ goto('#/search?q=极限');await new Promise(r=>setTimeout(r,500));
 check('下架正文不出现在搜索结果',content().querySelectorAll('.list__item').length===0&&text().includes('没有匹配的文章'));
 
 goto('#/announcements');await new Promise(r=>setTimeout(r,500));
-check('公告有独立栏目入口',text().includes('公告栏')&&content().querySelectorAll('.list__item').length===1);
+check('公告有独立栏目入口',text().includes('公告栏')&&content().querySelectorAll('.list__item').length===announcementSlugs.length);
 check('公告页不混入知识模块筛选',content().querySelectorAll('[data-module]').length===0);
 
 goto('#/article/lemoncat-noets');await new Promise(r=>setTimeout(r,600));
@@ -149,7 +150,7 @@ check('原公告地址可继续阅读',!/渲染出错|加载失败/.test(text())
 check('公告正文保留',content().querySelectorAll('.prose p').length>=1&&text().includes('我是柠檬味的猫'));
 check('公告封面保留',content().querySelectorAll('.article__cover img').length===1);
 check('公告面包屑指向独立栏目',content().querySelectorAll('.crumbs a[href="/announcements/"]').length===1);
-check('单篇公告不生成无效上下篇',content().querySelectorAll('.pager').length===0);
+const adjacent=content().querySelectorAll('.pager a');check('相邻公告只指向已发布内容',adjacent.length===Math.min(2,announcementSlugs.length-1)&&Array.from(adjacent).every(link=>publishedIndex.includes(link.getAttribute('href').split('/').filter(Boolean).at(-1))));
 check('document.title 已更新',document.title.includes('lemoncat的喵喵屋从今天开始正式营业了喵'),document.title);
 
 goto('#/article/apostol-sequence-limit');await new Promise(r=>setTimeout(r,500));

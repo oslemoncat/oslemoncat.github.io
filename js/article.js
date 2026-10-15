@@ -1,14 +1,14 @@
 /* 文章详情页：正文渲染、数学公式、目录、上下篇和评论。 */
-import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261015-catalog';
-import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261015-catalog';
-import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261015-catalog';
-import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261015-catalog';
-import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261015-catalog';
-import {api} from '../assets/js/auth.js?v=20261015-catalog';
+import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261015-protection';
+import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261015-protection';
+import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261015-protection';
+import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261015-protection';
+import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261015-protection';
+import {api} from '../assets/js/auth.js?v=20261015-protection';
 
-import {createComments} from './comments.js?v=20261015-catalog';
+import {createComments} from './comments.js?v=20261015-protection';
 
-import {createFilePreview} from '../assets/js/preview.js?v=20261015-catalog';
+import {createFilePreview} from '../assets/js/preview.js?v=20261015-protection';
 
 const KATEX_CSS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
 const KATEX_JS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';

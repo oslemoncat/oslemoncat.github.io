@@ -70,4 +70,4 @@ duration: 24:10
 
 ---
 
-文章评论的 D1 初始化、绑定和 Worker 上线步骤见 [COMMENTS_SETUP.md](COMMENTS_SETUP.md)。
+文章评论初始化见 [COMMENTS_SETUP.md](COMMENTS_SETUP.md)；禁言、人机验证及本次上线步骤见 [COMMENT_PROTECTION_SETUP.md](COMMENT_PROTECTION_SETUP.md)。
