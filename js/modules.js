@@ -1,7 +1,7 @@
 /* 知识模块总览页。 */
-import { el } from '../assets/js/util.js?v=20261012-comment-replies';
-import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js?v=20261012-comment-replies';
-import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js?v=20261012-comment-replies';
+import { el } from '../assets/js/util.js?v=20261015-catalog';
+import { loadModules, loadArticles, decorateModules } from '../assets/js/content.js?v=20261015-catalog';
+import { pageHead, moduleCard, emptyState } from '../assets/js/layout.js?v=20261015-catalog';
 
 export async function renderModules(container) {
   const [modules, articles] = await Promise.all([loadModules(), loadArticles()]);

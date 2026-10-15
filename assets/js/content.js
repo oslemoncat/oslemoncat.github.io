@@ -1,5 +1,5 @@
 /* 内容层：站点配置、模块、文章元数据与正文的加载与缓存。 */
-import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js?v=20261012-comment-replies';
+import { fetchJson, fetchText, normalizeDate, latestDate, byDateDesc, truncate, detectBase } from './util.js?v=20261015-catalog';
 
 const SITE_DEFAULT = {
   title: 'Lemoncat的喵喵屋',
@@ -90,14 +90,16 @@ export function loadArticles() {
     const results = await Promise.all(slugs.map(async (slug) => {
       try {
         const meta = await fetchJson(`content/articles/${slug}.json`);
-        const moduleSlug = meta.module || 'misc';
+        const kind=meta.kind==='announcement'?'announcement':'article';
+        const moduleSlug = kind==='announcement'?'announcements':meta.module || 'misc';
         const module = moduleMap.get(moduleSlug);
         return {
           slug,
+          kind,
           title: meta.title || slug,
           summary: meta.summary || '',
           module: moduleSlug,
-          moduleTitle: module ? module.title : moduleSlug,
+          moduleTitle: kind==='announcement'?'公告栏':module ? module.title : moduleSlug,
           accent: module ? module.accent : '#6b7280',
           date: normalizeDate(meta.date),
           updated: normalizeDate(meta.updated),
@@ -152,4 +154,18 @@ export function findModule(modules, slug) {
 
 export function findArticle(articles, slug) {
   return articles.find((article) => article.slug === slug) || null;
+}
+
+export function loadSearchIndex(){
+  return memo('search-index',async()=>{
+    const data=await fetchJson('content/generated/search-index.json');
+    if(data.version!==1||!Array.isArray(data.documents))throw new Error('搜索数据暂时无法读取，请刷新后重试。');
+    return Object.fromEntries(data.documents.filter(item=>typeof item.slug==='string'&&typeof item.text==='string').map(item=>[item.slug,item.text]));
+  });
+}
+export function loadTagHistory(){
+  return memo('tag-history',async()=>{
+    const data=await fetchJson('content/tags.json');
+    return data.version===1&&data.modules&&typeof data.modules==='object'?data.modules:{};
+  });
 }

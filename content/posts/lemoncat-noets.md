@@ -1,7 +1,8 @@
 ---
 slug: lemoncat-noets
 title: lemoncat的喵喵屋从今天开始正式营业了喵
-module: misc
+kind: announcement
+module: announcements
 date: 2026-10-09
 updated: 2026-10-09
 tags:

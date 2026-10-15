@@ -1,5 +1,5 @@
-import {el} from '../assets/js/util.js?v=20261012-comment-replies';
-import {api} from '../assets/js/auth.js?v=20261012-comment-replies';
+import {el} from '../assets/js/util.js?v=20261015-catalog';
+import {api} from '../assets/js/auth.js?v=20261015-catalog';
 
 export function createComments(article,user=window.__LEMONCAT_USER__){
   const endpoint='/api/articles/'+encodeURIComponent(article.slug)+'/comments';

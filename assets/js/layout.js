@@ -1,6 +1,6 @@
 /* 布局与共享组件：页头、页脚、卡片、列表、分页、面包屑。 */
-import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261012-comment-replies';
-import { icon } from './theme.js?v=20261012-comment-replies';
+import { el, formatDate, formatTimestamp, latestDate, resolveUrl, escapeHtml } from './util.js?v=20261015-catalog';
+import { icon } from './theme.js?v=20261015-catalog';
 
 /* ------------------------------------------------------------------ 页头 */
 export function renderHeader(site, activeSection = '', user = null) {
@@ -100,7 +100,7 @@ export function articleCard(article, base) {
     el('h3', { class: 'card__title' }, [el('a', { href: `#/article/${article.slug}`, text: article.title })]),
     article.summary ? el('p', { class: 'card__desc', text: article.summary }) : null,
     el('div', { class: 'card__meta' }, [
-      el('a', { class: 'tag tag--accent', href: `#/module/${article.module}`, text: article.moduleTitle }),
+      el('a', { class: 'tag tag--accent', href: article.kind==='announcement'?'/announcements/':`#/module/${article.module}`, text: article.moduleTitle }),
       article.date ? el('span', { text: formatTimestamp(article.uploadedAt||article.publishedAt||article.date) }) : null,
     ]),
     cover,

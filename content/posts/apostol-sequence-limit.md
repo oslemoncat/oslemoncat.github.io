@@ -12,7 +12,7 @@ tags:
 cover: assets/images/apostol-sequence-limit/cover.svg
 order: 10
 slug: apostol-sequence-limit
-draft: false
+draft: true
 uploaded_at: "2026-10-08T13:59:55Z"
 published_at: "2026-10-08T13:59:55Z"
 ---

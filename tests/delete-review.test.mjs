@@ -9,7 +9,7 @@ function request(path,method='GET',body){return new Request('https://auth.test'+
 function fixture(options={}){
  const calls=[],owners=options.owners||{'own-note':{id:'github:21',login:'member'},'foreign-note':{id:'github:22',login:'member'}};
  const name=options.admin?'oslemoncat':'member';
- let source='---\nslug: "own-note"\ntitle: "文章"\nauthor_id: "'+(options.fakeAuthor?'github:22':'github:21')+'"\n---\n正文\n';
+ let source='---\n'+(options.announcement?'kind: announcement\n':'')+'slug: "own-note"\ntitle: "文章"\nauthor_id: "'+(options.fakeAuthor?'github:22':'github:21')+'"\n---\n正文\n';
  let registry={version:1,articles:owners};
  const blobs=new Map(),trees=new Map();let fresh=0;
  const gh=async(url,input={})=>{
@@ -65,7 +65,7 @@ test('Malformed author registry is rejected instead of granting access',async()=
  const f=fixture({malformed:true});assert.equal((await handleRequest(request('/api/ownership'),env,f.gh)).status,503);
 });
 test('Member article list and permissions use stable GitHub ID, not name',async()=>{
- const f=fixture();const list=await handleRequest(request('/api/ownership'),env,f.gh);assert.deepEqual((await list.json()).owned,['own-note']);
+ const f=fixture({mainExists:true});const list=await handleRequest(request('/api/ownership'),env,f.gh);assert.deepEqual((await list.json()).owned,['own-note']);
  const own=await handleRequest(request('/api/articles/own-note/permissions'),env,f.gh);assert.equal((await own.json()).canDelete,true);
  const foreign=await handleRequest(request('/api/articles/foreign-note/permissions'),env,f.gh);assert.equal((await foreign.json()).canDelete,false);
 });
@@ -92,4 +92,16 @@ test('Member cannot overwrite an article owned by another author through a submi
 test('Member can withdraw only their own pending submission',async()=>{
  const f=fixture();assert.equal((await handleRequest(request('/api/submissions/2','DELETE'),env,f.gh)).status,200);assert.equal(f.calls.find(x=>x.m==='PATCH').body.state,'closed');
  const other=fixture({prOwner:{id:22,login:'other'}});assert.equal((await handleRequest(request('/api/submissions/2','DELETE'),env,other.gh)).status,403);assert.ok(!other.calls.some(x=>x.m==='PATCH'));
+});
+
+test('Ordinary authors cannot manage announcements even with a matching ownership record',async()=>{
+ const f=fixture({mainExists:true,announcement:true});const permissions=await handleRequest(request('/api/articles/own-note/permissions'),env,f.gh);
+ assert.equal((await permissions.json()).canDelete,false);
+ assert.equal((await handleRequest(request('/api/articles/own-note','DELETE'),{...env,GITHUB_CONTENT_TOKEN:'fake-key'},f.gh)).status,403);
+ assert.ok(!f.calls.some(call=>call.m==='DELETE'));
+});
+test('Crafted announcement source cannot be published through the ordinary review flow',async()=>{
+ const f=fixture({admin:true,announcement:true});
+ assert.equal((await handleRequest(request('/api/submissions/2/review','POST',{action:'publish',sha:head}),env,f.gh)).status,403);
+ assert.ok(!f.calls.some(call=>call.m==='PATCH'||call.m==='PUT'));
 });

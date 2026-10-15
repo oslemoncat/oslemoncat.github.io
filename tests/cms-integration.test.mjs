@@ -118,3 +118,29 @@ test('Deployment evidence includes only actual published versions and preserves 
   await assert.rejects(readPosts(root),/时间戳无效/);
  }finally{await cleanup(root);}
 });
+
+test('Search indexes only published bodies while tag history keeps archived and unused labels',async()=>{
+ const root=await fixture();
+ try{
+  await savePost(root,'live',{...metadata('live'),tags:['当前标签']},'只在正文出现的匹配内容');
+  await savePost(root,'hidden',{...metadata('hidden'),tags:['历史标签'],draft:true},'下架正文不应被搜索');
+  await writeFile(path.join(root,'content/tags.json'),JSON.stringify({version:1,modules:{'math-analysis':['尚未使用']}}));
+  const out=path.join(root,'dist');await buildSite(root,out);
+  const index=JSON.parse(await readFile(path.join(out,'content/generated/search-index.json'),'utf8'));
+  assert.deepEqual(index.documents,[{slug:'live',text:'只在正文出现的匹配内容'}]);assert.ok(!JSON.stringify(index).includes('下架正文'));
+  const tags=JSON.parse(await readFile(path.join(out,'content/tags.json'),'utf8')).modules['math-analysis'];assert.deepEqual(new Set(tags),new Set(['当前标签','历史标签','尚未使用']));
+  await access(path.join(out,'search/index.html'));await assert.rejects(access(path.join(out,'article/hidden')));
+ }finally{await cleanup(root);}
+});
+
+test('Announcements have a separate route and never become an ordinary knowledge module',async()=>{
+ const root=await fixture();
+ try{
+  await savePost(root,'news',{...metadata('news'),kind:'announcement',module:'announcements',tags:['公告']},'网站动态');
+  const out=path.join(root,'dist');await buildSite(root,out);await access(path.join(out,'announcements/index.html'));
+  const modules=JSON.parse(await readFile(path.join(out,'content/modules.json'),'utf8'));assert.equal(modules.length,1);assert.ok(!modules.some(module=>module.slug==='announcements'));
+  assert.deepEqual(JSON.parse(await readFile(path.join(out,'content/tags.json'),'utf8')).modules.announcements,['公告']);
+  await savePost(root,'news',{...metadata('news'),kind:'article',module:'announcements'},'不正确分类');
+  await assert.rejects(readPosts(root),/不存在的模块/);
+ }finally{await cleanup(root);}
+});

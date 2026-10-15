@@ -12,7 +12,7 @@ tags:
 cover: assets/images/linear-algebra-vectors-and-planes/cover.svg
 order: 10
 slug: linear-algebra-vectors-and-planes
-draft: false
+draft: true
 uploaded_at: "2026-10-08T13:59:55Z"
 published_at: "2026-10-08T13:59:55Z"
 ---

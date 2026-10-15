@@ -1,13 +1,13 @@
 /* 应用入口：独立路径路由、统一登录、页头页脚和页面分发。
    构建为模块、文章、登录与写作区生成对应 HTML。旧 #/ 链接会跳到新路径。
    startApp 可注入测试依赖；boot 启用真实登录检查。 */
-import { el } from './assets/js/util.js?v=20261012-comment-replies';
-import { loadSite, loadArticles } from './assets/js/content.js?v=20261012-comment-replies';
-import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261012-comment-replies';
-import { initTheme } from './assets/js/theme.js?v=20261012-comment-replies';
-import {restoreSession} from './assets/js/auth.js?v=20261012-comment-replies';
-import {renderLogin,safeNext} from './js/login.js?v=20261012-comment-replies';
-import { initAnchorScroll } from './assets/js/toc.js?v=20261012-comment-replies';
+import { el } from './assets/js/util.js?v=20261015-catalog';
+import { loadSite, loadArticles } from './assets/js/content.js?v=20261015-catalog';
+import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261015-catalog';
+import { initTheme } from './assets/js/theme.js?v=20261015-catalog';
+import {restoreSession} from './assets/js/auth.js?v=20261015-catalog';
+import {renderLogin,safeNext} from './js/login.js?v=20261015-catalog';
+import { initAnchorScroll } from './assets/js/toc.js?v=20261015-catalog';
 
 const ROUTES = [
   {pattern:/^\/login\/?$/,page:'login',section:''},
@@ -16,19 +16,23 @@ const ROUTES = [
   { pattern: /^\/modules\/?$/, page: 'modules', section: 'modules' },
   { pattern: /^\/module\/(.+?)\/?$/, page: 'module', section: 'modules' },
   { pattern: /^\/articles\/?$/, page: 'articles', section: 'articles' },
+  { pattern: /^\/search\/?$/, page: 'search', section: 'search' },
+  { pattern: /^\/announcements\/?$/, page: 'announcements', section: '' },
   { pattern: /^\/article\/(.+?)\/?$/, page: 'article', section: 'articles' },
   { pattern: /^\/about\/?$/, page: 'about', section: 'about' },
 ];
 
 const LOADERS = {
-  workspace:()=>import('./js/workspace.js?v=20261012-comment-replies').then(m=>m.renderWorkspace),
+  workspace:()=>import('./js/workspace.js?v=20261015-catalog').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
-  home: () => import('./js/home.js?v=20261012-comment-replies').then((mod) => mod.renderHome),
-  modules: () => import('./js/modules.js?v=20261012-comment-replies').then((mod) => mod.renderModules),
-  module: () => import('./js/module.js?v=20261012-comment-replies').then((mod) => mod.renderModule),
-  articles: () => import('./js/articles.js?v=20261012-comment-replies').then((mod) => mod.renderArticles),
-  article: () => import('./js/article.js?v=20261015-comment-status').then((mod) => mod.renderArticle),
-  about: () => import('./js/about.js?v=20261012-comment-replies').then((mod) => mod.renderAbout),
+  home: () => import('./js/home.js?v=20261015-catalog').then((mod) => mod.renderHome),
+  modules: () => import('./js/modules.js?v=20261015-catalog').then((mod) => mod.renderModules),
+  module: () => import('./js/module.js?v=20261015-catalog').then((mod) => mod.renderModule),
+  articles: () => import('./js/articles.js?v=20261015-catalog').then((mod) => mod.renderArticles),
+  search: () => import('./js/articles.js?v=20261015-catalog').then((mod) => mod.renderSearch),
+  announcements: () => import('./js/articles.js?v=20261015-catalog').then((mod) => mod.renderAnnouncements),
+  article: () => import('./js/article.js?v=20261015-catalog').then((mod) => mod.renderArticle),
+  about: () => import('./js/about.js?v=20261015-catalog').then((mod) => mod.renderAbout),
 };
 
 /** 把 location.hash 解析成 { path, params }。
@@ -140,10 +144,10 @@ export async function startApp(deps = {}) {
         ]));
       } else if(page==='login'){await render(content,params,authError);
       } else if(page==='workspace'){if(matched.arg)params.set('view',matched.arg);await render(content,params);
-      } else if (page === 'articles') {
+      } else if ((page === 'articles'||page === 'search'||page === 'announcements')) {
         await render(content, params);
       } else if (page === 'module' || page === 'article') {
-        await render(content, matched.arg);
+        await render(content, matched.arg, params);
       } else {
         await render(content);
       }

@@ -118,53 +118,52 @@ check('页脚已挂载', document.querySelectorAll('.site-footer').length > 0);
 goto('#/modules');
 await new Promise((r) => setTimeout(r, 500));
 check('模块总览页无错误提示', !/渲染出错|加载失败/.test(text()), text().slice(0, 120));
-check('模块总览页列出全部模块', text().includes('数学分析') && text().includes('线性代数') && text().includes('程序设计'));
+check('模块总览页列出七个知识模块', ['数学分析','C与C++','python','C#','杂记','论坛','线性代数'].every(title=>text().includes(title)));
+check('公告不出现在知识模块卡片中', ![...content().querySelectorAll('.module-card__link')].some(link=>link.textContent==='公告栏'));
 
-goto('#/module/python');
-await new Promise((r) => setTimeout(r, 500));
-check('模块页无错误提示', !/渲染出错|加载失败/.test(text()), text().slice(0, 120));
-check('模块页显示模块标题', text().includes('Python'));
-check('模块页列出该模块文章', text().includes('python-docx'));
+goto('#/module/python');await new Promise(r=>setTimeout(r,500));
+check('模块页无错误提示', !/渲染出错|加载失败/.test(text()),text().slice(0,120));
+check('模块页显示模块标题',text().includes('python'));
+check('空模块也显示历史标签筛选',content().querySelectorAll('.tag-picker').length===1&&text().includes('python-docx'));
+check('下架文章不在模块列表中',content().querySelectorAll('.list__item').length===0);
 
-goto('#/articles');
-await new Promise((r) => setTimeout(r, 500));
-check('文章列表页无错误提示', !/渲染出错|加载失败/.test(text()), text().slice(0, 120));
-check('文章列表页出现筛选条', content().querySelectorAll('.filter-chip').length >= 5,
-  `${content().querySelectorAll('.filter-chip').length} 个`);
-/* 新版用真实路径 /article/<slug>/，不再是 #/article/<slug> */
-check('文章列表页列出文章', content().querySelectorAll('a[href*="/article/"]').length >= 4,
-  `${content().querySelectorAll('a[href*="/article/"]').length} 篇`);
+goto('#/articles');await new Promise(r=>setTimeout(r,500));
+check('文章列表页无错误提示',!/渲染出错|加载失败/.test(text()),text().slice(0,120));
+check('文章列表页出现分类筛选',content().querySelectorAll('.filter-chip').length>=8);
+const publishedIndex=JSON.parse(readFileSync(join(ROOT,'content/articles.json'),'utf8')).articles;
+check('文章列表只显示当前已发布内容',content().querySelectorAll('.list__item').length===publishedIndex.length);
+check('仅保留原营业公告',publishedIndex.length===1&&publishedIndex[0]==='lemoncat-noets');
 
-goto('#/articles?q=极限');
-await new Promise((r) => setTimeout(r, 500));
-check('搜索框回填关键字', (content().querySelector('.search-input') || {}).value === '极限');
-check('搜索结果已过滤', text().includes('数列极限') && !text().includes('python-docx'), text().slice(0, 200));
+goto('#/search?q=柠檬味');await new Promise(r=>setTimeout(r,500));
+check('正文搜索框回填关键字',(content().querySelector('.search-input')||{}).value==='柠檬味');
+check('只在正文出现的关键词能搜到公告',content().querySelectorAll('.list__item').length===1&&text().includes('我是柠檬味的猫'));
+goto('#/search?q=极限');await new Promise(r=>setTimeout(r,500));
+check('下架正文不出现在搜索结果',content().querySelectorAll('.list__item').length===0&&text().includes('没有匹配的文章'));
 
-goto('#/article/apostol-sequence-limit');
-await new Promise((r) => setTimeout(r, 600));
-check('文章页无错误提示', !/渲染出错|加载失败/.test(text()), text().slice(0, 200));
-check('文章页显示标题', text().includes('数列极限的 ε-N 定义'));
-check('文章页渲染正文', content().querySelectorAll('.prose p').length >= 8,
-  `${content().querySelectorAll('.prose p').length} 段`);
-check('文章页有侧边目录', content().querySelectorAll('.toc a').length >= 3,
-  `${content().querySelectorAll('.toc a').length} 条`);
-check('文章页有定理块', content().querySelectorAll('.theorem').length >= 3,
-  `${content().querySelectorAll('.theorem').length} 个`);
-check('文章页有提示块', content().querySelectorAll('.callout').length >= 2);
-check('文章页有公式占位', content().querySelectorAll('.math-inline').length >= 10
-  && content().querySelectorAll('.math-display').length >= 3,
-  `inline=${content().querySelectorAll('.math-inline').length} display=${content().querySelectorAll('.math-display').length}`);
-check('文章页有视频外链卡', content().querySelectorAll('.video-card').length >= 1);
-check('文章页有面包屑', content().querySelectorAll('.crumbs a').length >= 3);
-/* 该模块现在有多篇文章，因此应当出现上下篇导航（旧版本此处断言相反） */
-check('多篇模块显示上下篇', content().querySelectorAll('.pager').length === 1,
-  `pager=${content().querySelectorAll('.pager').length}`);
-check('document.title 已更新', document.title.includes('数列极限'), document.title);
+goto('#/announcements');await new Promise(r=>setTimeout(r,500));
+check('公告有独立栏目入口',text().includes('公告栏')&&content().querySelectorAll('.list__item').length===1);
+check('公告页不混入知识模块筛选',content().querySelectorAll('[data-module]').length===0);
 
-goto('#/article/linear-algebra-vectors-and-planes');
-await new Promise((r) => setTimeout(r, 600));
-check('带配图文章渲染正常', !/渲染出错/.test(text()) && content().querySelectorAll('.prose img').length >= 1,
-  `${content().querySelectorAll('.prose img').length} 张图`);
+goto('#/article/lemoncat-noets');await new Promise(r=>setTimeout(r,600));
+check('原公告地址可继续阅读',!/渲染出错|加载失败/.test(text())&&text().includes('lemoncat的喵喵屋从今天开始正式营业了喵'));
+check('公告正文保留',content().querySelectorAll('.prose p').length>=1&&text().includes('我是柠檬味的猫'));
+check('公告封面保留',content().querySelectorAll('.article__cover img').length===1);
+check('公告面包屑指向独立栏目',content().querySelectorAll('.crumbs a[href="/announcements/"]').length===1);
+check('单篇公告不生成无效上下篇',content().querySelectorAll('.pager').length===0);
+check('document.title 已更新',document.title.includes('lemoncat的喵喵屋从今天开始正式营业了喵'),document.title);
+
+goto('#/article/apostol-sequence-limit');await new Promise(r=>setTimeout(r,500));
+check('下架文章原页面不再显示正文',text().includes('没有找到文章')&&!text().includes('这一节要解决什么'));
+
+// Rendering support remains covered with an archived local fixture, not a public route.
+const {renderMarkdown}=await import('../assets/js/markdown.js');
+const archived=readFileSync(join(REPO,'content/posts/apostol-sequence-limit.md'),'utf8').replace(/^---[\s\S]*?\r?\n---\r?\n/,'');
+const rendered=renderMarkdown(archived),fixtureNode=document.createElement('div');fixtureNode.innerHTML=rendered.html;
+check('归档样本仍能生成目录标题',rendered.headings.length>=3);
+check('归档样本仍能渲染定理块',fixtureNode.querySelectorAll('.theorem').length>=3);
+check('归档样本仍能渲染提示块',fixtureNode.querySelectorAll('.callout').length>=2);
+check('归档样本仍能渲染数学占位',fixtureNode.querySelectorAll('.math-inline').length>=10&&fixtureNode.querySelectorAll('.math-display').length>=3);
+check('归档样本仍能渲染视频卡片',fixtureNode.querySelectorAll('.video-card').length>=1);
 
 goto('#/about');
 await new Promise((r) => setTimeout(r, 500));

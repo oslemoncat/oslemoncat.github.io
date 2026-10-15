@@ -1,6 +1,6 @@
 # Lemoncat的喵喵屋
 
-个人学习笔记与投稿站，托管在 GitHub Pages。新版使用柠檬猫背景、奶油色与绿色界面、独立页面路径和无文字互动桌宠。保留六个知识模块和全部现有文章。
+个人学习笔记与投稿站，托管在 GitHub Pages。新版使用柠檬猫背景、奶油色与绿色界面、独立页面路径和无文字互动桌宠。知识模块现为数学分析、C与C++、python、C#、杂记、论坛、线性代数。首页另设管理员公告栏；营业公告保留原链接，其余旧文章已下架，源稿仍在仓库。
 
 网站：<https://oslemoncat.github.io/>。本次日期、预审与附件预览更新说明：[PUBLICATION_PREVIEW_SETUP.md](PUBLICATION_PREVIEW_SETUP.md)。部署与使用说明：[PORTAL_SETUP.md](PORTAL_SETUP.md)。旧版 Decap 接入说明：[CMS_SETUP.md](CMS_SETUP.md)。**先更新 Cloudflare Worker，再部署新版网站。**
 
@@ -12,7 +12,10 @@
 - `assets/css/`：样式；`assets/images/lemoncat-background.png`：柠檬猫背景。
 - `assets/js/auth.js`、`auth/worker.mjs`：前端登录与服务端权限/投稿接口。
 - `lemon-cat/`：网页桌宠的脚本与透明素材，无外部依赖。
-- `content/site.json`、`content/modules.json`：网站信息和知识模块。
+- `content/site.json`、`content/modules.json`：网站信息和七个知识模块。
+- `content/tags.json`：按模块保存共享的历史标签；已下架文章的标签仍可选用。
+- `/search/`：搜索已发布文章的标题、摘要、正文及标签，可结合模块和标签筛选。
+- `/announcements/`：独立公告栏；公告使用 `kind: announcement`，不加入知识模块列表。
 - `content/posts/<slug>.md`：文章编辑源，包含 YAML 元信息和 Markdown 正文。
 - `assets/images/uploads/`、`assets/files/uploads/`：上传资源。
 - `scripts/cms-build.mjs`：生成 `dist/` 文章、索引、页面与媒体文件。

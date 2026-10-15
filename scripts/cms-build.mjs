@@ -2,9 +2,10 @@ import { mkdir, writeFile, cp, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
+import {mergeTagHistory} from '../assets/js/catalog.js';
 import { readJson, readPosts } from './cms-content.mjs';
 
-const ignoredLegacy = new Set(['articles', 'posts', 'generated', 'articles.json']);
+const ignoredLegacy = new Set(['articles', 'posts', 'generated', 'articles.json', 'tags.json']);
 // A fresh output directory prevents deleted/unpublished posts remaining online.
 // No recursive delete is needed: each build uses a new directory.
 export async function buildSite(root, out) {
@@ -32,11 +33,14 @@ export async function buildSite(root, out) {
   await writeFile(path.join(out, 'content/articles.json'), index);
   await mkdir(path.join(out, 'content/generated'), { recursive: true });
   await writeFile(path.join(out, 'content/generated/articles-index.json'), index);
+  let registry={};try{const data=await readJson(path.join(root,'content/tags.json'));if(data.version!==1||!data.modules||typeof data.modules!=='object'||Array.isArray(data.modules))throw Error('标签历史格式无效');registry=data.modules;}catch(error){if(error.code!=='ENOENT')throw error;}
+  await writeFile(path.join(out,'content/tags.json'),JSON.stringify({version:1,modules:mergeTagHistory([...modules,{slug:'announcements'}],registry,posts)},null,2)+'\n');
+  await writeFile(path.join(out,'content/generated/search-index.json'),JSON.stringify({version:1,documents:published.map(post=>({slug:post.slug,text:post.body}))})+'\n');
   const config = YAML.parse(await readFile(path.join(root, 'admin/config.yml'), 'utf8'));
   config.collections.find(x => x.name === 'posts').fields.find(x => x.name === 'module').options = modules.map(x => ({ label: x.title, value: x.slug }));
   await writeFile(path.join(out, 'admin/config.yml'), YAML.stringify(config));
   const template=await readFile(path.join(out,'index.html'),'utf8');
-  const routes=['modules','articles','about','login','workspace','workspace/submissions','workspace/review','workspace/approved','workspace/published','workspace/assist',...modules.map(m=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.slug))throw new Error('Invalid module slug');return 'module/'+m.slug;}),...published.map(p=>'article/'+p.slug)];
+  const routes=['modules','articles','search','announcements','about','login','workspace','workspace/submissions','workspace/review','workspace/approved','workspace/published','workspace/assist',...modules.map(m=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(m.slug))throw new Error('Invalid module slug');return 'module/'+m.slug;}),...published.map(p=>'article/'+p.slug)];
   for(const route of routes){await mkdir(path.join(out,route),{recursive:true});await writeFile(path.join(out,route,'index.html'),template);}
   return { total: posts.length, published: published.length };
 }

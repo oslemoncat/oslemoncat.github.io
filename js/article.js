@@ -1,14 +1,14 @@
 /* 文章详情页：正文渲染、数学公式、目录、上下篇和评论。 */
-import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261012-comment-replies';
-import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261012-comment-replies';
-import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261012-comment-replies';
-import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261012-comment-replies';
-import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261012-comment-replies';
-import {api} from '../assets/js/auth.js?v=20261012-comment-replies';
+import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261015-catalog';
+import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261015-catalog';
+import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261015-catalog';
+import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261015-catalog';
+import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261015-catalog';
+import {api} from '../assets/js/auth.js?v=20261015-catalog';
 
-import {createComments} from './comments.js?v=20261015-comment-status';
+import {createComments} from './comments.js?v=20261015-catalog';
 
-import {createFilePreview} from '../assets/js/preview.js?v=20261012-comment-replies';
+import {createFilePreview} from '../assets/js/preview.js?v=20261015-catalog';
 
 const KATEX_CSS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
 const KATEX_JS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
@@ -149,17 +149,18 @@ export async function renderArticle(container, slug, options = {}) {
   const prev = position > 0 ? siblings[position - 1] : null;
   const next = position >= 0 && position < siblings.length - 1 ? siblings[position + 1] : null;
 
+  const moduleHref=article.kind==='announcement'?'/announcements/':`#/module/${article.module}`;
   const wrap = el('div', { class: 'wrap' });
   wrap.appendChild(breadcrumbs([
     { label: '首页', href: '#/' },
-    { label: '知识模块', href: '#/modules' },
-    { label: article.moduleTitle, href: `#/module/${article.module}` },
+    ...(article.kind==='announcement'?[]:[{ label: '知识模块', href: '#/modules' }]),
+    { label: article.moduleTitle, href:moduleHref },
     { label: article.title },
   ]));
 
   /* 正文头 */
   const header = el('header', { class: 'article__header' }, [
-    el('a', { class: 'article__module', href: `#/module/${article.module}`, text: article.moduleTitle }),
+    el('a', { class: 'article__module', href:moduleHref, text: article.moduleTitle }),
     el('h1', { class: 'article__title', text: article.title }),
     article.summary ? el('p', { class: 'article__summary', text: article.summary }) : null,
     el('div', { class: 'article__meta' }, [

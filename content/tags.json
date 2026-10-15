@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "modules": {
+    "math-analysis": [
+      "单调有界定理",
+      "数列极限",
+      "Apostol",
+      "ε-N 语言"
+    ],
+    "programming": [
+      "基础",
+      "内存",
+      "期中复习",
+      "网站编写",
+      "指针",
+      "C 语言",
+      "typescript"
+    ],
+    "python": [
+      "批处理",
+      "自动化",
+      "Python",
+      "python-docx"
+    ],
+    "csharp": [],
+    "misc": [],
+    "forum": [],
+    "linear-algebra": [
+      "空间直线",
+      "平面方程",
+      "数量积",
+      "向量"
+    ],
+    "announcements": [
+      "lemoncat"
+    ]
+  }
+}

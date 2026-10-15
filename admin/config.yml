@@ -45,11 +45,12 @@ collections:
         # cms-build.mjs synchronizes these options from content/modules.json.
         options:
           - { label: 数学分析, value: math-analysis }
-          - { label: 空间解析几何与线性代数, value: linear-algebra }
-          - { label: 程序设计, value: programming }
-          - { label: Python 与工具, value: python }
-          - { label: 学术写作, value: writing }
-          - { label: 杂记与效率, value: misc }
+          - { label: C与C++, value: programming }
+          - { label: python, value: python }
+          - { label: C#, value: csharp }
+          - { label: 杂记, value: misc }
+          - { label: 论坛, value: forum }
+          - { label: 线性代数, value: linear-algebra }
       - { label: 首次发布日期, name: date, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
       - { label: 更新日期, name: updated, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
       - { label: 标签, name: tags, widget: list, required: false }

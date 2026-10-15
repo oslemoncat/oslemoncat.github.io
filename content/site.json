@@ -1,7 +1,7 @@
 {
   "title": "Lemoncat的喵喵屋",
   "shortTitle": "Lemoncat的喵喵屋",
-  "description": "数学分析、线性代数、程序设计等课程学习笔记的整理与归档。",
+  "description": "数学分析、C与C++、python、C#、杂记、论坛与线性代数。",
   "author": "oslemoncat",
   "lang": "zh-CN",
   "url": "https://oslemoncat.github.io",
@@ -17,6 +17,10 @@
     {
       "label": "全部文章",
       "href": "/articles/"
+    },
+    {
+      "label": "搜索",
+      "href": "/search/"
     },
     {
       "label": "关于",

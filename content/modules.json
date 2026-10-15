@@ -2,49 +2,57 @@
   {
     "slug": "math-analysis",
     "title": "数学分析",
-    "subtitle": "Apostol 体系",
-    "description": "以 Tom M. Apostol《数学分析》为主线，整理极限、连续、微分、积分与级数的知识点、例题与易错辨析。",
+    "subtitle": "极限、微分、积分与级数",
+    "description": "整理数学分析的概念、定理、证明与学习笔记。",
     "accent": "#5b8def",
     "order": 10
   },
   {
-    "slug": "linear-algebra",
-    "title": "空间解析几何与线性代数",
-    "subtitle": "从几何直观到矩阵计算",
-    "description": "向量、平面与直线、矩阵与行列式、线性方程组、特征值与二次型，兼顾几何意义与代数方法。",
-    "accent": "#e0709a",
+    "slug": "programming",
+    "title": "C与C++",
+    "subtitle": "语法、算法与程序设计",
+    "description": "记录 C 与 C++ 的基础语法、指针、面向对象和算法实践。",
+    "accent": "#3fb08a",
     "order": 20
   },
   {
-    "slug": "programming",
-    "title": "程序设计",
-    "subtitle": "C 语言与算法基础",
-    "description": "C 语言语法要点、指针与内存、文件操作，以及常见算法题的思路整理与期中期末复习。",
-    "accent": "#3fb08a",
+    "slug": "python",
+    "title": "python",
+    "subtitle": "基础、工具与实践",
+    "description": "分享 Python 学习、自动化工具、数据处理与项目经验。",
+    "accent": "#d9a13b",
     "order": 30
   },
   {
-    "slug": "python",
-    "title": "Python 与工具",
-    "subtitle": "入门与实践",
-    "description": "Python 基础语法、常用标准库与第三方库（numpy、pandas、python-docx 等）的实践记录。",
-    "accent": "#d9a13b",
+    "slug": "csharp",
+    "title": "C#",
+    "subtitle": "语言基础与应用开发",
+    "description": "整理 C#、.NET 与应用开发的学习记录。",
+    "accent": "#8b6fd0",
     "order": 40
   },
   {
-    "slug": "writing",
-    "title": "学术写作",
-    "subtitle": "College Writing Skills",
-    "description": "论文结构、论点与论据、修辞模式与修改清单，基于 John Langan 教材的整理。",
-    "accent": "#8b6fd0",
+    "slug": "misc",
+    "title": "杂记",
+    "subtitle": "想法、见闻与随手记录",
+    "description": "收藏学习之外的发现、工具经验和日常想法。",
+    "accent": "#6b7280",
     "order": 50
   },
   {
-    "slug": "misc",
-    "title": "杂记与效率",
-    "subtitle": "随手记录",
-    "description": "选课、日程、工具配置等零散但有用的记录。",
-    "accent": "#6b7280",
-    "order": 90
+    "slug": "forum",
+    "title": "论坛",
+    "subtitle": "提问、交流与讨论",
+    "description": "发表问题与观点，通过文章评论和回复一起讨论。",
+    "accent": "#b18453",
+    "order": 60
+  },
+  {
+    "slug": "linear-algebra",
+    "title": "线性代数",
+    "subtitle": "向量、矩阵与线性空间",
+    "description": "整理线性代数的概念、计算方法、习题与几何理解。",
+    "accent": "#e0709a",
+    "order": 70
   }
 ]

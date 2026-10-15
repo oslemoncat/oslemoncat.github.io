@@ -138,15 +138,59 @@ async function readPortalBody(request) {
   if (text.length > 30_000_000) throw new PortalError(413, '本次附件总量过大，请分批提交。');
   try { return JSON.parse(text); } catch { throw new PortalError(400, '提交内容格式错误。'); }
 }
-async function submissionDocuments(input, identity, env, previousSource='') {
+
+function tagValues(values,limit=200){
+  if(!Array.isArray(values)||values.length>1000)throw new PortalError(400,'标签格式无效。');
+  const result=[],seen=new Set();
+  for(const value of values){
+    if(typeof value!=='string'||/[\u0000-\u001f\u007f]/.test(value))throw new PortalError(400,'标签需要 1 至 40 字。');
+    const tag=value.normalize('NFKC').trim().replace(/\s+/g,' '),key=tag.toLowerCase();
+    if(!tag||tag.length>40)throw new PortalError(400,'标签需要 1 至 40 字。');
+    if(!seen.has(key)){result.push(tag);seen.add(key);}
+  }
+  if(result.length>limit)throw new PortalError(400,'最多支持 '+limit+' 个标签。');
+  return result;
+}
+async function readTagRegistry(gh,env,ref='main'){
+  let file;try{file=await gh('/repos/'+env.REPOSITORY+'/contents/content/tags.json?ref='+ref);}catch(error){if(error.status===404)return {data:{version:1,modules:{}},sha:null};throw error;}
+  let data;try{
+    data=JSON.parse(decodeGithub(file.content));
+    if(data.version!==1||!data.modules||typeof data.modules!=='object'||Array.isArray(data.modules))throw Error('schema');
+    for(const [module,tags]of Object.entries(data.modules)){if(!postSlug(module))throw Error('module');tagValues(tags);}
+  }catch{throw new PortalError(503,'标签历史格式异常，请联系管理员。');}
+  return {data,sha:file.sha};
+}
+async function addModuleTag(request,identity,env,fetcher){
+  const input=await readPortalBody(request),[tag]=tagValues([input.tag],1);
+  const modules=JSON.parse(decodeGithub((await identity.gh('/repos/'+env.REPOSITORY+'/contents/content/modules.json')).content));
+  if(input.module==='announcements')needAdmin(identity);
+  if(input.module!=='announcements'&&!modules.some(module=>module.slug===input.module))throw new PortalError(400,'请选择有效的知识模块。');
+  const writer=identity.role==='admin'?identity.gh:(path,method,body)=>contentWriter(env,fetcher,path,method,body);
+  for(let attempt=0;attempt<2;attempt++){
+    const {data,sha}=await readTagRegistry(identity.gh,env),previous=Object.hasOwn(data.modules,input.module)?data.modules[input.module]:[],tags=tagValues([...previous,tag]);
+    if(tags.length===previous.length)return {status:200,data:{tags,created:false}};
+    data.modules={...data.modules,[input.module]:tags};
+    try{
+      await writer('/repos/'+env.REPOSITORY+'/contents/content/tags.json','PUT',{message:'Add module tag: '+input.module,branch:'main',content:btoa(Array.from(encoder.encode(JSON.stringify(data,null,2)+'\n'),byte=>String.fromCharCode(byte)).join('')),...(sha?{sha}:{})});
+      return {status:201,data:{tags,created:true}};
+    }catch(error){if(error.status!==409)throw error;if(attempt)throw new PortalError(409,'标签刚刚发生变化，请再试一次。');}
+  }
+}
+
+async function submissionDocuments(input, identity, env, previousSource='',allowAnnouncement=false) {
   const p = input.post || {};
+  const kind=p.kind||(sourceField(previousSource,'kind')||'article');
+  if(!['article','announcement'].includes(kind))throw new PortalError(400,'文章类型无效。');
+  if(kind==='announcement'){if(!allowAnnouncement)throw new PortalError(403,'公告只能通过管理员的公告发布入口保存。');needAdmin(identity);}
+  if(sourceField(previousSource,'kind')==='announcement')needAdmin(identity);
+  const module=kind==='announcement'?'announcements':p.module;
   if (!postSlug(p.slug) || typeof p.title !== 'string' || !p.title.trim() || p.title.length > 160 || typeof p.body !== 'string' || !p.body.trim() || p.body.length > 400_000) throw new PortalError(400, '请填写有效的文章地址、标题和正文。');
   const modulesFile = await identity.gh(`/repos/${env.REPOSITORY}/contents/content/modules.json`);
   const modules = JSON.parse(decodeGithub(modulesFile.content));
-  if (!modules.some(x => x.slug === p.module)) throw new PortalError(400, '请选择有效的知识模块。');
+  if (kind!=='announcement'&&!modules.some(x => x.slug === module)) throw new PortalError(400, '请选择有效的知识模块。');
   const isDate = value => { if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false; const time = Date.parse(value + 'T00:00:00Z'); return Number.isFinite(time) && new Date(time).toISOString().slice(0,10) === value; };
   if (!isDate(p.date) || !isDate(p.updated) || p.updated < p.date) throw new PortalError(400, '文章日期无效。');
-  const tags = Array.isArray(p.tags) ? p.tags.filter(x => typeof x === 'string' && x.length <= 40).slice(0,20) : [];
+  const tags = tagValues(p.tags??[],20);
   const images = Array.isArray(p.images) ? p.images.slice(0,30) : [];
   const attachments = Array.isArray(p.attachments) ? p.attachments.slice(0,30) : [];
   for (const [records,key,prefix] of [[images,'src','/assets/images/'],[attachments,'file','/assets/files/']]) {
@@ -166,7 +210,7 @@ async function submissionDocuments(input, identity, env, previousSource='') {
     if (size > (isImage ? 10 : 20) * 1024 * 1024 || (bytes += size) > 20 * 1024 * 1024) throw new PortalError(413, '图片最多 10 MB、附件最多 20 MB，本次文件总量最多 20 MB。');
     documents.push({ path: f.path, content: f.content, encoding: 'base64' });
   }
-  const meta = { slug:p.slug, title:p.title.trim(), summary:String(p.summary || '').slice(0,1000), module:p.module, date:sourceField(previousSource,'date')||chinaDay(), updated:[sourceField(previousSource,'date')||'',chinaDay()].sort().at(-1), uploaded_at:sourceField(previousSource,'uploaded_at')||new Date().toISOString(), updated_at:new Date().toISOString(), tags, cover:images[0]?.src || p.cover || '', order:0, draft:false, images, attachments, author:identity.user.login,...(actorId(identity)?{author_id:actorId(identity)}:{}) };
+  const meta = { slug:p.slug, title:p.title.trim(), summary:String(p.summary || '').slice(0,1000), kind,module, date:sourceField(previousSource,'date')||chinaDay(), updated:[sourceField(previousSource,'date')||'',chinaDay()].sort().at(-1), uploaded_at:sourceField(previousSource,'uploaded_at')||new Date().toISOString(), updated_at:new Date().toISOString(), tags, cover:images[0]?.src || p.cover || '', order:0, draft:false, images, attachments, author:identity.user.login,...(actorId(identity)?{author_id:actorId(identity)}:{}) };
   if (meta.cover && (!meta.cover.startsWith('/assets/images/') && !meta.cover.startsWith('assets/images/'))) throw new PortalError(400, '封面图地址无效。');
   const source = '---\n' + Object.entries(meta).map(([key,value]) => key + ': ' + JSON.stringify(value)).join('\n') + '\n---\n' + p.body.trim() + '\n';
   documents.push({ path:`content/posts/${p.slug}.md`, content:source, encoding:'utf-8' });
@@ -194,7 +238,8 @@ async function inspectPortalSubmission(identity, env, pr) {
   const posts = files.filter(f => /^content\/posts\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(f.filename));
   if (posts.length !== 1 || files.some(f => !['added','modified'].includes(f.status) || (!posts.includes(f) && (f.status !== 'added' || !/^assets\/(images|files)\/uploads\/[a-z0-9-]+\.(png|jpg|jpeg|gif|webp|avif|pdf|docx?|xlsx?|pptx?|txt|md|csv|zip|mp4|webm|ogv|mp3|m4a|wav|ogg|oga|flac)$/i.test(f.filename))))) throw new PortalError(403, '稿件包含文章和媒体以外的改动，不能从这里发布。');
   const source = await identity.gh(`/repos/${pr.head.repo.full_name}/contents/${posts[0].filename}?ref=${pr.head.sha}`);
-  return { files, source:decodeGithub(source.content), path:posts[0].filename };
+  const text=decodeGithub(source.content);if(sourceField(text,'kind')==='announcement')throw new PortalError(403,'公告不能通过普通投稿发布，请由管理员在公告编辑页处理。');
+  return { files, source:text, path:posts[0].filename };
 }
 async function handlePortal(request, env, fetcher) {
   const origin = request.headers.get('Origin');
@@ -206,6 +251,7 @@ async function handlePortal(request, env, fetcher) {
     const url = new URL(request.url), resource = url.pathname;
     const commentsRoute=resource.match(/^\/api\/articles\/([a-z0-9]+(?:-[a-z0-9]+)*)\/comments(?:\/([^/]+))?$/);
     if(commentsRoute){const result=await handleComments(request,env,identity,commentsRoute[1],commentsRoute[2]);return portalJson(result.data,result.status,origin);}
+    if(resource==='/api/tags'&&request.method==='POST'){const result=await addModuleTag(request,identity,env,fetcher);return portalJson(result.data,result.status,origin);}
     if (resource === '/api/session' && request.method === 'GET') return portalJson({login:user.login,id:actorId(identity),avatar:user.avatar_url,role,comments:Boolean(env.COMMENTS_DB?.prepare),ai:role==='admin' && Boolean(env.DEEPSEEK_API_KEY)},200,origin);
     if(resource==='/api/submissions'&&request.method==='GET'){
       const page=Math.max(1,Math.min(100,Number(url.searchParams.get('page'))||1));
@@ -296,7 +342,9 @@ async function handlePortal(request, env, fetcher) {
     if(permission&&request.method==='GET'){
       if(role==='admin')return portalJson({canDelete:true,canEdit:true},200,origin);
       const owners=await readOwners(gh,env),id=actorId(identity);
-      return portalJson({canDelete:Boolean(id&&ownerOf(owners,permission[1])?.id===id),canEdit:false},200,origin);
+      let canDelete=Boolean(id&&ownerOf(owners,permission[1])?.id===id);
+      if(canDelete){try{const file=await gh('/repos/'+env.REPOSITORY+'/contents/content/posts/'+permission[1]+'.md?ref=main');canDelete=sourceField(decodeGithub(file.content),'kind')!=='announcement';}catch(error){if(error.status!==404)throw error;canDelete=false;}}
+      return portalJson({canDelete,canEdit:false},200,origin);
     }
     if(submissionMatch&&request.method==='DELETE'){
       const pr=await getPortalSubmission(identity,env,submissionMatch[1]);
@@ -309,7 +357,7 @@ async function handlePortal(request, env, fetcher) {
       needAdmin(identity);const input=await readPortalBody(request),slug=input.post?.slug;
       if(!postSlug(slug))throw new PortalError(400,'文章地址无效。');
       let previous='';try{previous=decodeGithub((await gh('/repos/'+env.REPOSITORY+'/contents/content/posts/'+slug+'.md?ref=main')).content);}catch(e){if(e.status!==404)throw e;}
-      const {documents,post}=await submissionDocuments(input,identity,env,previous),owners=await readOwners(gh,env);
+      const {documents,post}=await submissionDocuments(input,identity,env,previous,true),owners=await readOwners(gh,env);
       const owner={...(ownerOf(owners,slug)||{id:actorId(identity),login:user.login}),slug},source=documents.pop().content;
       const publication=await publishDocuments(identity,env,documents,source,owner);
       return portalJson({slug:post.slug,sha:publication.sha,publication,uploadedAt:publication.uploadedAt,message:'文章已保存，正在部署。'},201,origin);
@@ -319,6 +367,7 @@ async function handlePortal(request, env, fetcher) {
       const slug=deleteMatch[1],id=actorId(identity),owners=role==='admin'?null:await readOwners(gh,env);
       if(role!=='admin'&&(!id||ownerOf(owners,slug)?.id!==id))throw new PortalError(403,'只能删除自己写的文章。');
       const file=await gh(`/repos/${env.REPOSITORY}/contents/content/posts/${slug}.md?ref=main`);
+      if(role!=='admin'&&sourceField(decodeGithub(file.content),'kind')==='announcement')throw new PortalError(403,'只有管理员可以管理公告。');
       if(role!=='admin'&&sourceActor(decodeGithub(file.content))!==id)throw new PortalError(403,'文章作者记录不一致，请联系管理员。');
       const resource=`/repos/${env.REPOSITORY}/contents/content/posts/${slug}.md`,body={message:'Delete article: '+slug,sha:file.sha,branch:'main'};
       if(role==='admin')await gh(resource,'DELETE',body);else await contentWriter(env,fetcher,resource,'DELETE',body);
@@ -359,7 +408,7 @@ async function checkSubmissionOwner(identity,env,pr,content){
   const slug=content.path.split('/').pop().replace(/\.md$/,'');
   const owners=await readOwners(identity.gh,env),owner=ownerOf(owners,slug);
   let exists=false;
-  try{await identity.gh('/repos/'+env.REPOSITORY+'/contents/'+content.path+'?ref=main');exists=true;}catch(e){if(e.status!==404)throw e;}
+  try{const file=await identity.gh('/repos/'+env.REPOSITORY+'/contents/'+content.path+'?ref=main');if(sourceField(decodeGithub(file.content),'kind')==='announcement')throw new PortalError(403,'普通投稿不能修改公告。');exists=true;}catch(e){if(e.status!==404)throw e;}
   const person=pr.portalAuthor||pr.user;
   const author=Number.isSafeInteger(person?.id)?'github:'+person.id:null;
   if(exists&&(!author||owner?.id!==author))throw new PortalError(403,'稿件试图覆盖别人的文章，请使用新的文章地址。');
@@ -554,7 +603,13 @@ async function publishDocuments(identity,env,documents,source,owner,extra={}){
  const at=new Date().toISOString(),id=crypto.randomUUID(),uploadedAt=sourceField(previous,'uploaded_at')||sourceField(source,'uploaded_at')||at;
  const publication={id,slug:owner.slug,title:sourceField(source,'title'),authorId:owner.id,author:owner.login,uploadedAt,publishedAt:sourceField(previous,'published_at')||at,updatedAt:at,...extra};
  const stamped=setSourceFields(source,{date:sourceField(previous,'date')||chinaDay(at),updated:[sourceField(previous,'date')||'',chinaDay(at)].sort().at(-1),uploaded_at:uploadedAt,published_at:publication.publishedAt,updated_at:at,publication_id:id,author:owner.login,author_id:owner.id});
- const sha=await commitPortalFiles(gh,env.REPOSITORY,ref,[...documents,
+ const tagDocuments=[];let sourceTags=[];try{sourceTags=JSON.parse(source.match(/^tags:[ \t]*(\[[^\r\n]*\])/m)?.[1]||'[]');}catch{}
+ const module=sourceField(source,'module');
+ if(postSlug(module)&&Array.isArray(sourceTags)&&sourceTags.length){
+   const {data}=await readTagRegistry(gh,env,ref),previous=Object.hasOwn(data.modules,module)?data.modules[module]:[],tags=tagValues([...previous,...sourceTags]);
+   if(tags.length!==previous.length){data.modules={...data.modules,[module]:tags};tagDocuments.push({path:'content/tags.json',encoding:'utf-8',content:JSON.stringify(data,null,2)+'\n'});}
+ }
+ const sha=await commitPortalFiles(gh,env.REPOSITORY,ref,[...documents,...tagDocuments,
   {path:'content/posts/'+owner.slug+'.md',encoding:'utf-8',content:stamped},
   {path:'content/ownership.json',encoding:'utf-8',content:JSON.stringify({version:1,articles:{...owners,[owner.slug]:{id:owner.id,login:owner.login}}},null,2)+'\n'},
   {path:'content/publications.json',encoding:'utf-8',content:JSON.stringify({version:1,items:[publication,...records.filter(x=>x.slug!==owner.slug)].slice(0,200)},null,2)+'\n'}
@@ -564,7 +619,7 @@ async function publishDocuments(identity,env,documents,source,owner,extra={}){
 async function publicationStatus(identity,env,item,fetcher){
  const result={id:item.id,slug:item.slug,status:'queued',message:'已保存到仓库，等待部署开始。'};
  try{const response=await fetcher(env.CMS_ORIGIN+'/build-info.json?publication='+item.id,{cache:'no-store',signal:AbortSignal.timeout(8000)});if(response.ok){const live=await response.json();if(live.publications?.some(x=>x.id===item.id&&x.slug===item.slug))return {...result,status:'success',message:'已上线，可在网站阅读。',url:env.CMS_ORIGIN+'/article/'+item.slug+'/',commit:live.commit};}}catch{}
- try{await identity.gh('/repos/'+env.REPOSITORY+'/contents/content/posts/'+item.slug+'.md?ref=main');}catch(e){if(e.status===404)return {...result,status:'removed',message:'文章已移除。'};throw e;}
+ try{const file=await identity.gh('/repos/'+env.REPOSITORY+'/contents/content/posts/'+item.slug+'.md?ref=main');if(/^draft:[ \t]*true[ \t]*$/m.test(decodeGithub(file.content)))return {...result,status:'removed',message:'文章已下架。'};}catch(e){if(e.status===404)return {...result,status:'removed',message:'文章已移除。'};throw e;}
  const commits=await identity.gh('/repos/'+env.REPOSITORY+'/commits?path='+encodeURIComponent('content/posts/'+item.slug+'.md')+'&per_page=1');if(!commits.length)return {...result,status:'removed',message:'文章已移除。'};
  const sha=commits[0].sha,runs=await identity.gh('/repos/'+env.REPOSITORY+'/actions/runs?head_sha='+sha+'&event=push&per_page=20');
  const run=(runs.workflow_runs||[]).filter(x=>x.head_sha===sha&&x.path==='.github/workflows/pages.yml'&&x.event==='push').sort((a,b)=>b.id-a.id)[0];if(!run)return result;
