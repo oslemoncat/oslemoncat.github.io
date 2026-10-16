@@ -98,6 +98,7 @@ export function articleCard(article, base) {
   return el('article', { class: 'card', style: `--card-accent:${article.accent}` }, [
     el('div', { class: 'card__accent' }),
     el('h3', { class: 'card__title' }, [el('a', { href: `#/article/${article.slug}`, text: article.title })]),
+    article.subtitle ? el('p', { class: 'card__subtitle', text: article.subtitle }) : null,
     article.summary ? el('p', { class: 'card__desc', text: article.summary }) : null,
     el('div', { class: 'card__meta' }, [
       el('a', { class: 'tag tag--accent', href: article.kind==='announcement'?'/announcements/':`#/module/${article.module}`, text: article.moduleTitle }),
@@ -115,6 +116,7 @@ export function articleList(articles) {
       el('span', { class: 'list__date', text: formatTimestamp(article.uploadedAt||article.publishedAt||article.date) || '—' }),
       el('span', { class: 'list__body' }, [
         el('span', { class: 'list__title', text: article.title }),
+        article.subtitle ? el('span', { class: 'list__subtitle', text: article.subtitle }) : null,
         article.summary ? el('span', { class: 'list__summary', text: article.summary }) : null,
       ]),
       el('span', { class: 'list__module', text: article.moduleTitle }),

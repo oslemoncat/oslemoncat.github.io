@@ -67,3 +67,8 @@ html[data-theme=dark] .article-comments .comment-button.danger{color:#efaea2;bor
 .submission-feedback{grid-column:1/-1;padding:16px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-elevated);overflow-wrap:anywhere;font-size:14px;line-height:1.7}
 .submission-feedback[hidden]{display:none}.submission-feedback strong{display:block;font-size:16px}.submission-feedback p{margin:8px 0}.submission-feedback a{text-decoration:underline;text-underline-offset:3px}.submission-feedback .upload-progress{display:block;width:100%;height:10px;margin:12px 0;accent-color:var(--accent)}.submission-feedback .upload-progress[hidden]{display:none}
 .submission-feedback[data-state=success]{border-color:var(--accent);background:var(--accent-soft)}.submission-feedback[data-state=error]{border-color:#bd6c60}.submission-feedback[data-state=error] strong{color:#a3473d}.review-module{max-width:360px;margin:24px 0}
+
+/* Optional subtitles keep the main title as the only article heading. */
+.article__subtitle{margin:12px 0 20px;color:var(--text-muted);font-size:22px;line-height:1.6;overflow-wrap:anywhere}
+.card__subtitle,.list__subtitle{display:block;margin:8px 0;color:var(--text);font-size:16px;line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:600px){.article__subtitle{font-size:18px}.card__subtitle,.list__subtitle{font-size:15px}}

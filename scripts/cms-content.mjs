@@ -26,6 +26,7 @@ export async function readPosts(root) {
     const slug = path.basename(file, '.md');
     if (!validSlug(slug) || meta.slug !== slug) throw new Error(`${file} 的 slug 必须与文件名一致`);
     if (typeof meta.title !== 'string' || !meta.title.trim()) throw new Error(`${file} 缺少标题`);
+    if (meta.subtitle !== undefined && (typeof meta.subtitle !== 'string' || meta.subtitle.length > 160)) throw new Error(`${file} 副标题必须为不超过 160 字的文字`);
     const kind=meta.kind||'article';
     if(!['article','announcement'].includes(kind))throw new Error(file+' 的文章类型无效');
     if(kind==='announcement'?meta.module!=='announcements':!moduleIds.has(meta.module))throw new Error(file+' 引用了不存在的模块');

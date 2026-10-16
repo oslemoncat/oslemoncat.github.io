@@ -179,6 +179,8 @@ async function addModuleTag(request,identity,env,fetcher){
 
 async function submissionDocuments(input, identity, env, previousSource='',allowAnnouncement=false) {
   const p = input.post || {};
+  const subtitle=Object.hasOwn(p,'subtitle')?p.subtitle:(sourceField(previousSource,'subtitle')||'');
+  if(typeof subtitle!=='string'||subtitle.length>160)throw new PortalError(400,'副标题请使用不超过 160 字的文字。');
   const kind=p.kind||(sourceField(previousSource,'kind')||'article');
   if(!['article','announcement'].includes(kind))throw new PortalError(400,'文章类型无效。');
   if(kind==='announcement'){if(!allowAnnouncement)throw new PortalError(403,'公告只能通过管理员的公告发布入口保存。');needAdmin(identity);}
@@ -210,7 +212,7 @@ async function submissionDocuments(input, identity, env, previousSource='',allow
     if (size > (isImage ? 10 : 20) * 1024 * 1024 || (bytes += size) > 20 * 1024 * 1024) throw new PortalError(413, '图片最多 10 MB、附件最多 20 MB，本次文件总量最多 20 MB。');
     documents.push({ path: f.path, content: f.content, encoding: 'base64' });
   }
-  const meta = { slug:p.slug, title:p.title.trim(), summary:String(p.summary || '').slice(0,1000), kind,module, date:sourceField(previousSource,'date')||chinaDay(), updated:[sourceField(previousSource,'date')||'',chinaDay()].sort().at(-1), uploaded_at:sourceField(previousSource,'uploaded_at')||new Date().toISOString(), updated_at:new Date().toISOString(), tags, cover:images[0]?.src || p.cover || '', order:0, draft:false, images, attachments, author:identity.user.login,...(actorId(identity)?{author_id:actorId(identity)}:{}) };
+  const meta = { slug:p.slug, title:p.title.trim(), subtitle:subtitle.trim(), summary:String(p.summary || '').slice(0,1000), kind,module, date:sourceField(previousSource,'date')||chinaDay(), updated:[sourceField(previousSource,'date')||'',chinaDay()].sort().at(-1), uploaded_at:sourceField(previousSource,'uploaded_at')||new Date().toISOString(), updated_at:new Date().toISOString(), tags, cover:images[0]?.src || p.cover || '', order:0, draft:false, images, attachments, author:identity.user.login,...(actorId(identity)?{author_id:actorId(identity)}:{}) };
   if (meta.cover && (!meta.cover.startsWith('/assets/images/') && !meta.cover.startsWith('assets/images/'))) throw new PortalError(400, '封面图地址无效。');
   const source = '---\n' + Object.entries(meta).map(([key,value]) => key + ': ' + JSON.stringify(value)).join('\n') + '\n---\n' + p.body.trim() + '\n';
   documents.push({ path:`content/posts/${p.slug}.md`, content:source, encoding:'utf-8' });

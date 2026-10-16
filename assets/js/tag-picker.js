@@ -1,5 +1,5 @@
 import {el} from './util.js?v=20261015-protection';
-import {normalizeTags,searchText} from './catalog.js?v=20261015-protection';
+import {normalizeTags,searchText} from './catalog.js?v=20261016-subtitles';
 
 export function createTagPicker({label='标签',selected=[],history=[],onChange=()=>{},onCreate,allowCreate=true,limit=20}={}){
   let chosen=normalizeTags(selected,limit),available=normalizeTags([...history,...selected]),busy=false;

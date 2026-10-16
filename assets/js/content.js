@@ -97,6 +97,7 @@ export function loadArticles() {
           slug,
           kind,
           title: meta.title || slug,
+          subtitle: typeof meta.subtitle === 'string' ? meta.subtitle : '',
           summary: meta.summary || '',
           module: moduleSlug,
           moduleTitle: kind==='announcement'?'公告栏':module ? module.title : moduleSlug,

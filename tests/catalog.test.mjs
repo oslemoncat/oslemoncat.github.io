@@ -23,3 +23,10 @@ test('Search excerpts include body matches without changing the original body',(
  const body='前言 '.repeat(30)+'只在正文出现的关键词'+ ' 结束'.repeat(50),article={summary:'默认摘要'};
  assert.match(searchExcerpt(article,body,'关键词'),/关键词/);assert.equal(searchExcerpt(article,body,''),'默认摘要');assert.equal(body.includes('关键词'),true);
 });
+
+
+test('Subtitle-only terms participate in partial search and still respect module tag filters',()=>{
+ const article={title:'学习记录',subtitle:'Eigenvalue 特征值笔记',summary:'摘要',tags:['线性代数']};
+ assert.equal(matchArticle(article,'正文','EIGEN 特征',['线性代数']),true);
+ assert.equal(matchArticle(article,'正文','EIGEN',['Python']),false);
+});

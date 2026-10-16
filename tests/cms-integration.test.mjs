@@ -144,3 +144,18 @@ test('Announcements have a separate route and never become an ordinary knowledge
   await assert.rejects(readPosts(root),/不存在的模块/);
  }finally{await cleanup(root);}
 });
+
+
+test('Build supports older posts without subtitles and preserves a separate optional subtitle',async()=>{
+ const root=await fixture();try{
+  await savePost(root,'old-post',metadata('old-post'),'旧正文');
+  await savePost(root,'with-subtitle',{...metadata('with-subtitle'),subtitle:'单独保存的副标题'},'新正文');
+  const out=path.join(root,'dist');await buildSite(root,out);
+  const meta=JSON.parse(await readFile(path.join(out,'content/articles/with-subtitle.json'),'utf8'));
+  assert.equal(meta.subtitle,'单独保存的副标题');assert.equal(meta.title,'标题');assert.equal(meta.summary,'摘要');
+  assert.equal((await readPosts(root)).posts.length,2);
+  for(const subtitle of [null,42,[],{},'字'.repeat(161)]){
+   await savePost(root,'with-subtitle',{...metadata('with-subtitle'),subtitle},'正文');await assert.rejects(readPosts(root),/副标题/);
+  }
+ }finally{await cleanup(root);}
+});

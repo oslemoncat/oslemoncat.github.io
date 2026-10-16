@@ -2,8 +2,8 @@
    构建为模块、文章、登录与写作区生成对应 HTML。旧 #/ 链接会跳到新路径。
    startApp 可注入测试依赖；boot 启用真实登录检查。 */
 import { el } from './assets/js/util.js?v=20261015-protection';
-import { loadSite, loadArticles } from './assets/js/content.js?v=20261015-protection';
-import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261015-protection';
+import { loadSite, loadArticles } from './assets/js/content.js?v=20261016-subtitles';
+import { renderHeader, renderFooter } from './assets/js/layout.js?v=20261016-subtitles';
 import { initTheme } from './assets/js/theme.js?v=20261015-protection';
 import {restoreSession} from './assets/js/auth.js?v=20261015-protection';
 import {renderLogin,safeNext} from './js/login.js?v=20261015-protection';
@@ -23,16 +23,16 @@ const ROUTES = [
 ];
 
 const LOADERS = {
-  workspace:()=>import('./js/workspace.js?v=20261015-submission-feedback').then(m=>m.renderWorkspace),
+  workspace:()=>import('./js/workspace.js?v=20261016-subtitles').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
-  home: () => import('./js/home.js?v=20261015-protection').then((mod) => mod.renderHome),
-  modules: () => import('./js/modules.js?v=20261015-protection').then((mod) => mod.renderModules),
-  module: () => import('./js/module.js?v=20261015-protection').then((mod) => mod.renderModule),
-  articles: () => import('./js/articles.js?v=20261015-protection').then((mod) => mod.renderArticles),
-  search: () => import('./js/articles.js?v=20261015-protection').then((mod) => mod.renderSearch),
-  announcements: () => import('./js/articles.js?v=20261015-protection').then((mod) => mod.renderAnnouncements),
-  article: () => import('./js/article.js?v=20261015-protection').then((mod) => mod.renderArticle),
-  about: () => import('./js/about.js?v=20261015-protection').then((mod) => mod.renderAbout),
+  home: () => import('./js/home.js?v=20261016-subtitles').then((mod) => mod.renderHome),
+  modules: () => import('./js/modules.js?v=20261016-subtitles').then((mod) => mod.renderModules),
+  module: () => import('./js/module.js?v=20261016-subtitles').then((mod) => mod.renderModule),
+  articles: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderArticles),
+  search: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderSearch),
+  announcements: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderAnnouncements),
+  article: () => import('./js/article.js?v=20261016-subtitles').then((mod) => mod.renderArticle),
+  about: () => import('./js/about.js?v=20261016-subtitles').then((mod) => mod.renderAbout),
 };
 
 /** 把 location.hash 解析成 { path, params }。

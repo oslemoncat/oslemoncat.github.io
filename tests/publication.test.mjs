@@ -131,3 +131,29 @@ test('A member or stale reviewed version cannot publish a module override',async
  assert.equal((await f.api('/api/submissions/7/review','POST',{action:'publish',sha:hash('stale'),module:'misc'})).status,409);
  assert.equal(f.main(),before);
 });
+
+
+test('Subtitle survives member submission, editing and reviewed publication independently of title and summary',async()=>{
+ const f=fixture(),draft={...post,subtitle:'  从直觉到证明  '};
+ const submitted=await f.api('/api/submissions','POST',{post:draft});assert.equal(submitted.status,201);
+ assert.match((await f.api('/api/submissions/7')).data.source,/^subtitle: "从直觉到证明"$/m);
+ const updated=await f.api('/api/submissions/7','PATCH',{post:{...post,subtitle:'补充说明 <img src=x onerror=alert(1)>'},sha:submitted.data.sha});assert.equal(updated.status,200,JSON.stringify(updated.data));
+ f.setUser({id:11,login:'oslemoncat'});
+ const published=await f.api('/api/submissions/7/review','POST',{action:'publish',sha:updated.data.sha});assert.equal(published.status,200,JSON.stringify(published.data));
+ assert.match(f.source(),/^subtitle: "补充说明 <img src=x onerror=alert\(1\)>"$/m);
+ assert.match(f.source(),/^title: "测试文章"$/m);assert.match(f.source(),/^summary: "摘要"$/m);assert.match(f.source(),/author_id: "github:21"/);
+});
+
+test('Older clients preserve an existing subtitle while an explicit empty subtitle clears it',async()=>{
+ const f=fixture();f.setUser({id:11,login:'oslemoncat'});
+ assert.equal((await f.api('/api/articles','POST',{post:{...post,subtitle:'保留的副标题'}})).status,201);
+ assert.equal((await f.api('/api/articles','POST',{post})).status,201);assert.match(f.source(),/^subtitle: "保留的副标题"$/m);
+ assert.equal((await f.api('/api/articles','POST',{post:{...post,subtitle:''}})).status,201);assert.match(f.source(),/^subtitle: ""$/m);
+});
+
+test('Malformed and oversized subtitles fail before any repository write',async()=>{
+ for(const subtitle of [null,42,[],{},'字'.repeat(161)]){
+  const f=fixture(),r=await f.api('/api/submissions','POST',{post:{...post,subtitle}});
+  assert.equal(r.status,400,JSON.stringify(r.data));assert.match(r.data.message,/副标题/);assert.ok(!f.calls.some(c=>c.m!=='GET'));
+ }
+});

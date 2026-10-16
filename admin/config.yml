@@ -37,7 +37,8 @@ collections:
         widget: string
         hint: 使用小写英文、数字和短横线；发布后请保持不变。
         pattern: ['^[a-z0-9]+(-[a-z0-9]+)*$', '例如 sequence-limits']
-      - { label: 标题, name: title, widget: string }
+      - { label: 主标题, name: title, widget: string }
+      - { label: 副标题, name: subtitle, widget: string, required: false, hint: '选填，最多 160 字，与摘要分别保存。' }
       - { label: 摘要, name: summary, widget: text, required: false }
       - label: 知识模块
         name: module

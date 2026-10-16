@@ -19,7 +19,7 @@ export const searchText=value=>String(value||'').normalize('NFKC').toLowerCase()
 export function matchArticle(article,body,query,tags=[]){
   const own=new Set((article.tags||[]).map(searchText));
   if(tags.some(tag=>!own.has(searchText(tag))))return false;
-  const haystack=searchText([article.title,article.summary,article.moduleTitle,...(article.tags||[]),body].join(' '));
+  const haystack=searchText([article.title,article.subtitle,article.summary,article.moduleTitle,...(article.tags||[]),body].join(' '));
   return searchText(query).split(' ').filter(Boolean).every(word=>haystack.includes(word));
 }
 export function searchExcerpt(article,body,query){

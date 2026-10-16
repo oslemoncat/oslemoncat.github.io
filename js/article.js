@@ -1,8 +1,8 @@
 /* 文章详情页：正文渲染、数学公式、目录、上下篇和评论。 */
 import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261015-protection';
-import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261015-protection';
+import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261016-subtitles';
 import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261015-protection';
-import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261015-protection';
+import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261016-subtitles';
 import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261015-protection';
 import {api} from '../assets/js/auth.js?v=20261015-protection';
 
@@ -162,6 +162,7 @@ export async function renderArticle(container, slug, options = {}) {
   const header = el('header', { class: 'article__header' }, [
     el('a', { class: 'article__module', href:moduleHref, text: article.moduleTitle }),
     el('h1', { class: 'article__title', text: article.title }),
+    article.subtitle ? el('p', { class: 'article__subtitle', text: article.subtitle }) : null,
     article.summary ? el('p', { class: 'article__summary', text: article.summary }) : null,
     el('div', { class: 'article__meta' }, [
       article.date ? el('span', { text: `发布于 ${formatTimestamp(article.publishedAt||article.date)}` }) : null,

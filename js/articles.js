@@ -1,8 +1,8 @@
 import {el,debounce} from '../assets/js/util.js?v=20261015-protection';
-import {loadModules,loadArticles,loadSearchIndex,loadTagHistory,decorateModules} from '../assets/js/content.js?v=20261015-protection';
-import {pageHead,articleList,emptyState,breadcrumbs} from '../assets/js/layout.js?v=20261015-protection';
-import {matchArticle,searchExcerpt,mergeTagHistory,normalizeTags} from '../assets/js/catalog.js?v=20261015-protection';
-import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-protection';
+import {loadModules,loadArticles,loadSearchIndex,loadTagHistory,decorateModules} from '../assets/js/content.js?v=20261016-subtitles';
+import {pageHead,articleList,emptyState,breadcrumbs} from '../assets/js/layout.js?v=20261016-subtitles';
+import {matchArticle,searchExcerpt,mergeTagHistory,normalizeTags} from '../assets/js/catalog.js?v=20261016-subtitles';
+import {createTagPicker} from '../assets/js/tag-picker.js?v=20261016-subtitles';
 import {api} from '../assets/js/auth.js?v=20261015-protection';
 
 export async function renderArticles(container,params=new URLSearchParams(),options={}){

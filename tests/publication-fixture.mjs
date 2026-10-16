@@ -32,7 +32,7 @@ function fixture(options={}){
   if(p.endsWith('/git/commits')&&m==='POST'){const sha=hash('commit-'+(++counter));commits.set(sha,{tree:{sha:body.tree},files:trees.get(body.tree)});return respond({sha});}
   if(p.includes('/git/commits/')&&m==='GET')return respond(commits.get(p.split('/').pop()));
   if(p.endsWith('/git/refs')&&m==='POST'){heads.set(body.ref.slice('refs/heads/'.length),body.sha);return respond({object:{sha:body.sha}});}
-  if(p.includes('/git/refs/heads/')&&m==='PATCH'){const branch=p.split('/git/refs/heads/')[1];if(options.conflict&&branch==='main')return respond({message:'Conflict'},409);heads.set(branch,body.sha);if(branch==='main')main=body.sha;return respond({object:{sha:body.sha}});}
+  if(p.includes('/git/refs/heads/')&&m==='PATCH'){const branch=p.split('/git/refs/heads/')[1];if(options.conflict&&branch==='main')return respond({message:'Conflict'},409);heads.set(branch,body.sha);if(branch==='main')main=body.sha;for(const pr of prs.values())if(pr.head.ref===branch)pr.head.sha=body.sha;return respond({object:{sha:body.sha}});}
   if(p.endsWith('/pulls')&&m==='POST'){
    const sha=heads.get(body.head),pr={number:7,title:body.title,body:body.body,html_url:'https://github.com/'+repo+'/pull/7',state:'open',updated_at:new Date().toISOString(),user:{id:11,login:'oslemoncat'},base:{ref:'main',sha:main,repo:{full_name:repo}},head:{ref:body.head,sha,repo:{full_name:repo}},changed_files:[...commits.get(sha).files].filter(([path,value])=>commits.get(main).files.get(path)!==value).length};prs.set(7,pr);return respond(pr);
   }

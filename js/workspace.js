@@ -1,10 +1,10 @@
 import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261015-protection';
 import {api,logout} from '../assets/js/auth.js?v=20261015-protection';
-import {loadModules,loadArticles,loadArticleBody,loadTagHistory} from '../assets/js/content.js?v=20261015-protection';
+import {loadModules,loadArticles,loadArticleBody,loadTagHistory} from '../assets/js/content.js?v=20261016-subtitles';
 import {renderMarkdown} from '../assets/js/markdown.js?v=20261015-protection';
-import {pageHead} from '../assets/js/layout.js?v=20261015-protection';
+import {pageHead} from '../assets/js/layout.js?v=20261016-subtitles';
 import {createFilePreview} from '../assets/js/preview.js?v=20261015-protection';
-import {createTagPicker} from '../assets/js/tag-picker.js?v=20261015-protection';
+import {createTagPicker} from '../assets/js/tag-picker.js?v=20261016-subtitles';
 import {createPublicationStatus} from '../assets/js/publication.js?v=20261015-protection';
 const today=()=>new Date(Date.now()+8*3600_000).toISOString().slice(0,10);
 const labels={pending:'等待审核',approved:'审核通过',published:'审核通过',closed:'未通过'};
@@ -54,7 +54,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
         for(const image of prose.querySelectorAll('img'))image.src=mediaUrl(image.getAttribute('src')||'');
         for(const link of prose.querySelectorAll('a')){const href=link.getAttribute('href')||'';if(/^\/?assets\//.test(href)){link.href=mediaUrl(href);link.target='_self';link.rel='noopener noreferrer';}}
         const reviewModules=await loadModules(),submittedModule=reviewModules.find(module=>module.slug===post.module);let reviewModule=null;
-        stage.append(el('h2',{text:post.title||detail.title}),el('p',{class:'muted',text:'投稿人：'+detail.author}),el('p',{class:'muted',text:'投稿分区：'+(submittedModule?.title||post.module||'未指定')}),prose);
+        stage.append(el('h2',{text:post.title||detail.title}),...(post.subtitle?[el('p',{class:'article__subtitle',text:post.subtitle})]:[]),el('p',{class:'muted',text:'投稿人：'+detail.author}),el('p',{class:'muted',text:'投稿分区：'+(submittedModule?.title||post.module||'未指定')}),prose);
         if(post.images?.length)stage.append(el('div',{class:'review-media'},post.images.map(image=>el('figure',{},[el('img',{src:mediaUrl(image.src),alt:image.caption||'',loading:'lazy'}),el('figcaption',{text:image.caption||''})]))));
         if(post.attachments?.length)stage.append(el('ul',{class:'review-files'},post.attachments.map(file=>el('li',{},[el('a',{href:mediaUrl(file.file),text:file.title||file.file.split('/').pop(),target:'_self'}),createFilePreview(mediaUrl(file.file),file.title)]))));
         if(detail.publication)stage.append(createPublicationStatus(detail.publication));
@@ -82,7 +82,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
       const load=async()=>{more.disabled=true;try{const result=await api('/api/submissions?page='+page++);const items=result.items.filter(x=>view!=='review'||x.state==='pending');for(const item of items)rows.append(el('div',{class:'submission-row'},[el('div',{},[el('a',{href:`/workspace/${admin?'review':'submissions'}/?id=${item.number}`,text:item.title}),el('p',{class:'muted',text:item.author+' · '+item.date.slice(0,10)})]),el('span',{class:'submission-state',text:labels[item.state]})]));more.hidden=!result.hasMore;if(!rows.children.length&&!result.hasMore)rows.append(el('p',{class:'empty',text:view==='review'?'现在没有等待审核的文章。':'还没有投稿，去写下第一篇吧。'}));}catch(e){fail(e);}finally{more.disabled=false;}};more.addEventListener('click',load);await load();return;
     }
     const [modules,tagHistory]=await Promise.all([loadModules(),loadTagHistory()]),draftKey='lemoncat-draft:'+user.login;
-    let post={kind:'article',slug:'',title:'',summary:'',module:'misc',date:today(),updated:today(),tags:[],body:'',images:[],attachments:[]},submission=null;
+    let post={kind:'article',slug:'',title:'',subtitle:'',summary:'',module:'misc',date:today(),updated:today(),tags:[],body:'',images:[],attachments:[]},submission=null;
     const editing=params.get('edit'),pending=params.get('submission');
     if(editing){const articles=await loadArticles(),article=articles.find(a=>a.slug===editing);if(!article)throw new Error('没有找到这篇文章。');post={...post,...article,body:await loadArticleBody(editing),updated:today()};}
     else if(pending){submission=await api('/api/submissions/'+pending);if((submission.authorId?submission.authorId!==user.id:submission.author.toLowerCase()!==user.login.toLowerCase())||submission.state!=='open')throw new Error('只能编辑自己尚未审核的稿件。');post={...post,...generatedPost(submission.source),updated:today()};}
@@ -96,7 +96,8 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
     const fields={},form=el('form',{class:'editor-form'}),files=[],resources=el('div',{class:'upload-list'}),preview=el('div',{class:'prose editor-preview',hidden:true});
     const field=(name,label,tag='input',attrs={})=>{const input=el(tag,{class:'field-input',...(tag==='input'?{type:'text'}:{}),...attrs});if(tag!=='select')input.value=name==='tags'?(post.tags||[]).join(', '):post[name]||'';fields[name]=input;return el('label',{class:'field'},[el('span',{text:label}),input]);};
     const kind=admin?field('kind','发布位置','select'):null;if(admin){fields.kind.append(el('option',{value:'article',text:'知识模块文章'}),el('option',{value:'announcement',text:'公告栏（仅管理员）'}));fields.kind.value=post.kind;}
-    const title=field('title','文章标题','input',{required:true,maxlength:160,placeholder:'给今天的发现起个名字'});
+    const title=field('title','主标题','input',{required:true,maxlength:160,placeholder:'给今天的发现起个名字'});
+    const subtitle=field('subtitle','副标题（选填）','input',{maxlength:160,placeholder:'补充主标题，留空也可以'});
     const body=field('body','正文','textarea',{required:true,rows:18,placeholder:'从这里开始写。支持 Markdown、代码、数学公式…'});
     const slug=field('slug','文章地址','input',{required:true,pattern:'[a-z0-9]+(-[a-z0-9]+)*',maxlength:100,placeholder:'例如 my-study-notes',...(editing||pending?{readonly:true}:{})});
     const module=field('module','知识模块','select');for(const m of modules)fields.module.append(el('option',{value:m.slug,text:m.title}));fields.module.value=modules.some(module=>module.slug===post.module)?post.module:'misc';
@@ -108,7 +109,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
     const uploadedInfo=el('p',{class:'field-hint',text:'上传成功时间：'+(formatTimestamp(post.uploadedAt||post.uploaded_at)||'提交成功后由系统记录（北京时间）')});
     const fileInput=el('input',{type:'file',multiple:true,hidden:true,accept:'.png,.jpg,.jpeg,.gif,.webp,.avif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.zip,.mp4,.webm,.ogv,.mp3,.m4a,.wav,.ogg,.oga,.flac'});
     const upload=el('button',{class:'btn btn--ghost',type:'button',text:'添加图片或附件'}),previewButton=el('button',{class:'text-button',type:'button',text:'预览正文'});upload.addEventListener('click',()=>fileInput.click());
-    const collect=()=>({...post,slug:fields.slug.value.trim(),title:fields.title.value.trim(),summary:fields.summary.value,kind:admin?fields.kind.value:'article',module:admin&&fields.kind.value==='announcement'?'announcements':fields.module.value,date:post.date||today(),updated:today(),tags:tagPicker.value(),body:fields.body.value});
+    const collect=()=>({...post,slug:fields.slug.value.trim(),title:fields.title.value.trim(),subtitle:fields.subtitle.value.trim(),summary:fields.summary.value,kind:admin?fields.kind.value:'article',module:admin&&fields.kind.value==='announcement'?'announcements':fields.module.value,date:post.date||today(),updated:today(),tags:tagPicker.value(),body:fields.body.value});
     const saveDraft=debounce(()=>{if(!editing&&!pending&&!saved){try{localStorage.setItem(draftKey,JSON.stringify({...collect(),images:post.images.filter(x=>!files.some(f=>'/'+f.path===x.src)),attachments:post.attachments.filter(x=>!files.some(f=>'/'+f.path===x.file))}));}catch{}}},400);form.addEventListener('input',saveDraft);
     const drawFiles=()=>{resources.replaceChildren();for(const [key,list,label]of [['images',post.images,'图片'],['attachments',post.attachments,'附件']])for(const record of list){const path=record.src||record.file,button=el('button',{class:'text-button',type:'button',text:'移除','aria-label':'移除 '+path});button.addEventListener('click',()=>{list.splice(list.indexOf(record),1);const i=files.findIndex(f=>'/'+f.path===path);if(i>=0)files.splice(i,1);drawFiles();saveDraft();});const current=files.find(f=>'/'+f.path===path),name=record.caption||record.title||path.split('/').pop();const row=el('div',{class:'upload-row'},[el('span',{text:label+' · '+name}),button]);resources.append(row);if(key==='attachments'){const preview=createFilePreview(path,name,current?{getBytes:async()=>Uint8Array.from(atob(current.content),c=>c.charCodeAt(0)).buffer}:{});if(preview)resources.append(preview);}}};
     fileInput.addEventListener('change',async()=>{upload.disabled=true;try{for(const file of fileInput.files){const ext=file.name.split('.').pop().toLowerCase(),image=['png','jpg','jpeg','gif','webp','avif'].includes(ext),max=(image?10:20)*1024*1024;
@@ -117,7 +118,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
       const safeName=(file.name.slice(0,-ext.length-1).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'file')+'-'+crypto.randomUUID()+'.'+ext;
       const path=`assets/${image?'images':'files'}/uploads/${safeName}`;files.push({path,content,size:file.size});(image?post.images:post.attachments).push(image?{src:'/'+path,caption:file.name}:{file:'/'+path,title:file.name});
     }drawFiles();status.textContent='文件已加入本次稿件，提交时一起上传。';}catch(e){fail(e);}finally{fileInput.value='';upload.disabled=false;}});
-    previewButton.addEventListener('click',()=>{preview.hidden=!preview.hidden;body.hidden=!preview.hidden;previewButton.textContent=preview.hidden?'预览正文':'继续编辑';if(!preview.hidden)preview.innerHTML=renderMarkdown(fields.body.value).html;});
+    previewButton.addEventListener('click',()=>{preview.hidden=!preview.hidden;body.hidden=!preview.hidden;previewButton.textContent=preview.hidden?'预览正文':'继续编辑';if(!preview.hidden)preview.replaceChildren(...[el('h1',{text:fields.title.value}),fields.subtitle.value.trim()?el('p',{class:'article__subtitle',text:fields.subtitle.value.trim()}):null,el('div',{html:renderMarkdown(fields.body.value).html})].filter(Boolean));});
     const uploadProgress=el('progress',{class:'upload-progress',max:1,value:0,'aria-label':'稿件提交进度'});
     const uploadTitle=el('strong'),uploadMessage=el('p'),uploadLinks=el('div');
     const uploadFeedback=el('section',{class:'submission-feedback',role:'status','aria-live':'polite','aria-atomic':'true',hidden:true},[uploadTitle,uploadProgress,uploadMessage,uploadLinks]);
@@ -138,6 +139,6 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
       for(const input of form.querySelectorAll('input,textarea,select,button'))input.disabled=true;
       status.append(' ',el('a',{href:'/workspace/submissions/',text:'查看投稿'}));
     }catch(e){showUpload('error',e.message);uploadLinks.append(el('a',{href:'/workspace/submissions/',text:'查看我的投稿，确认后再重试'}));submit.textContent=submitLabel;submit.disabled=upload.disabled=false;}});
-    form.append(el('div',{class:'editor-main'},[title,el('div',{class:'editor-toolbar'},[upload,previewButton,fileInput]),body,preview]),el('aside',{class:'editor-details'},[kind,slug,module,tagPicker.element,el('p',{class:'field-hint',text:'可新建或选用历史标签。新标签在文章发布后会进入模块的历史标签。'}),summary,date,uploadedInfo,resources,el('p',{class:'field-hint',text:admin?'发布后会更新网站内容。':'提交的稿件与附件会进入公开仓库，审核通过后才显示在本站。'}),uploadFeedback,submit]));drawFiles();stage.append(form);
+    form.append(el('div',{class:'editor-main'},[title,subtitle,el('div',{class:'editor-toolbar'},[upload,previewButton,fileInput]),body,preview]),el('aside',{class:'editor-details'},[kind,slug,module,tagPicker.element,el('p',{class:'field-hint',text:'可新建或选用历史标签。新标签在文章发布后会进入模块的历史标签。'}),summary,date,uploadedInfo,resources,el('p',{class:'field-hint',text:admin?'发布后会更新网站内容。':'提交的稿件与附件会进入公开仓库，审核通过后才显示在本站。'}),uploadFeedback,submit]));drawFiles();stage.append(form);
   }catch(e){fail(e);}
 }

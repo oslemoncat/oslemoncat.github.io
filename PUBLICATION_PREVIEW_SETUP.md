@@ -56,3 +56,10 @@ date 和首次 uploaded_at、published_at 由服务端记录。写作区的首�
 Cloudflare 更新及扩大内容令牌权限需要在控制台完成，网页部署成功不代表这两步已经完成。DOC/PPT 在线查看器是否能从微软网络读取你的附件，也需要实际联网环境验证。
 
 参考：[GitHub PR 接口](https://docs.github.com/en/rest/pulls/pulls)、[PDF.js](https://github.com/mozilla/pdf.js/wiki/setup-pdf.js-in-a-website)、[Mammoth](https://github.com/mwilliamson/mammoth.js)、[SheetJS](https://docs.sheetjs.com/docs/getting-started/installation/standalone/)。
+
+
+## 主标题与副标题（2026-10-16）
+
+写作区的主标题仍保存为 `title`；可选副标题保存为 `subtitle`，最多 160 字，与摘要 `summary`、文章 URL `slug` 分开。副标题会显示在文章页、文章列表和审核预览中，并参与搜索。旧文章不需要补填，旧版客户端省略副标题时会保留已有值，主动清空则删除副标题。
+
+此项同时修改了后台。请用 `D:\lemoncat_hub\auth\worker.mjs` 全文替换 Cloudflare `lemoncat-cms-auth` 的实际入口 `worker.js` 后 Deploy；只更新 GitHub Pages 不会更新后台。无需新增变量或数据库迁移。
