@@ -24,7 +24,10 @@
     ],
     "csharp": [],
     "misc": [],
-    "forum": [],
+    "forum": [
+      "codex",
+      "更新维护问题"
+    ],
     "linear-algebra": [
       "空间直线",
       "平面方程",

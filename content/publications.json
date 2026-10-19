@@ -2,6 +2,18 @@
   "version": 1,
   "items": [
     {
+      "id": "6b14f34f-5eb4-4267-826c-23f40663c538",
+      "slug": "daily",
+      "title": "codex换源Deepseek问题解决",
+      "authorId": "github:330442261",
+      "author": "LJH1011-07",
+      "uploadedAt": "2026-10-18T06:25:18.436Z",
+      "publishedAt": "2026-10-19T01:37:59.793Z",
+      "updatedAt": "2026-10-19T01:37:59.793Z",
+      "submission": 8,
+      "reviewedSha": "a8d8dc81ba222b13fca2f52090a4c946fb523fca"
+    },
+    {
       "id": "876c805b-3b8c-449d-b409-a0f2a613f305",
       "slug": "firstassay",
       "title": "第一篇文章",
