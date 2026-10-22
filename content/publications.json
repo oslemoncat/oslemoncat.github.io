@@ -2,6 +2,16 @@
   "version": 1,
   "items": [
     {
+      "id": "98063c27-ba87-41c0-9834-276b409aa0e3",
+      "slug": "taylor-formula",
+      "title": "泰勒公式细节性问题讨论",
+      "authorId": "github:313387258",
+      "author": "oslemoncat",
+      "uploadedAt": "2026-10-22T14:02:33.285Z",
+      "publishedAt": "2026-10-22T14:02:33.951Z",
+      "updatedAt": "2026-10-22T14:02:33.951Z"
+    },
+    {
       "id": "1543fd28-4db0-4a0a-b986-d4c8804b1864",
       "slug": "lhospital-rule-remark",
       "title": "洛必达法则使用注意事项",
