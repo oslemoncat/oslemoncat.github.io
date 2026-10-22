@@ -2,6 +2,16 @@
   "version": 1,
   "items": [
     {
+      "id": "1543fd28-4db0-4a0a-b986-d4c8804b1864",
+      "slug": "lhospital-rule-remark",
+      "title": "洛必达法则使用注意事项",
+      "authorId": "github:313387258",
+      "author": "oslemoncat",
+      "uploadedAt": "2026-10-22T05:08:08.472Z",
+      "publishedAt": "2026-10-22T05:08:09.048Z",
+      "updatedAt": "2026-10-22T05:08:09.048Z"
+    },
+    {
       "id": "772baede-2b9e-4f46-a14e-ae64781f0f82",
       "slug": "writing-guide1",
       "title": "关于上传文章的说明（1）",
