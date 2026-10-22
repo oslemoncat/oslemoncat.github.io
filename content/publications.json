@@ -2,6 +2,16 @@
   "version": 1,
   "items": [
     {
+      "id": "772baede-2b9e-4f46-a14e-ae64781f0f82",
+      "slug": "writing-guide1",
+      "title": "关于上传文章的说明（1）",
+      "authorId": "github:313387258",
+      "author": "oslemoncat",
+      "uploadedAt": "2026-10-22T05:02:03.884Z",
+      "publishedAt": "2026-10-22T05:02:04.807Z",
+      "updatedAt": "2026-10-22T05:02:04.807Z"
+    },
+    {
       "id": "346ce52b-fca4-4a91-8220-0c831f4c63d0",
       "slug": "mean-value-theorems-and-proofs",
       "title": "中值定理及证明",
