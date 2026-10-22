@@ -23,7 +23,7 @@ const ROUTES = [
 ];
 
 const LOADERS = {
-  workspace:()=>import('./js/workspace.js?v=20261016-subtitles').then(m=>m.renderWorkspace),
+  workspace:()=>import('./js/workspace.js?v=20261022-math-preview').then(m=>m.renderWorkspace),
   login:()=>Promise.resolve(renderLogin),
   home: () => import('./js/home.js?v=20261016-subtitles').then((mod) => mod.renderHome),
   modules: () => import('./js/modules.js?v=20261016-subtitles').then((mod) => mod.renderModules),
@@ -31,7 +31,7 @@ const LOADERS = {
   articles: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderArticles),
   search: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderSearch),
   announcements: () => import('./js/articles.js?v=20261016-subtitles').then((mod) => mod.renderAnnouncements),
-  article: () => import('./js/article.js?v=20261016-subtitles').then((mod) => mod.renderArticle),
+  article: () => import('./js/article.js?v=20261022-math-preview').then((mod) => mod.renderArticle),
   about: () => import('./js/about.js?v=20261016-subtitles').then((mod) => mod.renderAbout),
 };
 

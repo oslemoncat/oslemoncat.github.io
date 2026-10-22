@@ -1,6 +1,6 @@
 /* Shared in-page previews. Heavy parsers load only when a file is opened. */
 import {el,safeUrl} from './util.js?v=20261015-protection';
-import {renderMarkdown} from './markdown.js?v=20261015-protection';
+import {renderMarkdown,renderMath} from './markdown.js?v=20261022-math-preview';
 const libraries=new Map();
 function script(name,global){
  if(window[global])return Promise.resolve(window[global]);
@@ -50,7 +50,7 @@ export function createFilePreview(url,title,options={}){
     previous.addEventListener('click',async()=>{if(number>1){number--;await draw();}});next.addEventListener('click',async()=>{if(number<document.numPages){number++;await draw();}});await draw();
    }else if(['md','markdown','txt'].includes(ext)){
     const text=new TextDecoder().decode(await bytes()),view=el(ext==='txt'?'pre':'div',{class:ext==='txt'?'file-text':'prose'});
-    if(ext==='txt')view.textContent=text;else view.innerHTML=renderMarkdown(text).html;stage.replaceChildren(view);
+    if(ext==='txt')view.textContent=text;else view.innerHTML=renderMarkdown(text).html;stage.replaceChildren(view);if(ext!=='txt')await renderMath(view);
    }else if(ext==='docx'){
     const mammoth=await script('mammoth.browser.js','mammoth'),result=await mammoth.convertToHtml({arrayBuffer:await bytes()},{externalFileAccess:false});
     stage.replaceChildren(el('div',{class:'prose word-preview',html:sanitizedWord(result.value)}));

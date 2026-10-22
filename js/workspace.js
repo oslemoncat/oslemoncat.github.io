@@ -1,9 +1,9 @@
 import {el,debounce,formatTimestamp} from '../assets/js/util.js?v=20261015-protection';
 import {api,logout} from '../assets/js/auth.js?v=20261015-protection';
 import {loadModules,loadArticles,loadArticleBody,loadTagHistory} from '../assets/js/content.js?v=20261016-subtitles';
-import {renderMarkdown} from '../assets/js/markdown.js?v=20261015-protection';
+import {renderMarkdown,renderMath} from '../assets/js/markdown.js?v=20261022-math-preview';
 import {pageHead} from '../assets/js/layout.js?v=20261016-subtitles';
-import {createFilePreview} from '../assets/js/preview.js?v=20261015-protection';
+import {createFilePreview} from '../assets/js/preview.js?v=20261022-math-preview';
 import {createTagPicker} from '../assets/js/tag-picker.js?v=20261016-subtitles';
 import {createPublicationStatus} from '../assets/js/publication.js?v=20261015-protection';
 const today=()=>new Date(Date.now()+8*3600_000).toISOString().slice(0,10);
@@ -75,7 +75,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
           stage.append(el('div',{class:'editor-actions'},[publish,reject]));
         }else if(detail.state==='open'&&detail.author.toLowerCase()===user.login.toLowerCase())stage.append(el('a',{class:'btn btn--primary',href:'/workspace/?submission='+id,text:'继续编辑'}));
         if(detail.state==='open'&&(admin||detail.canDelete||detail.author.toLowerCase()===user.login.toLowerCase())){const withdraw=el('button',{class:'text-button danger',type:'button',text:'撤回投稿'});withdraw.addEventListener('click',async()=>{if(!confirm('确认撤回这篇待审投稿？'))return;withdraw.disabled=true;try{await api('/api/submissions/'+id,{method:'DELETE'});stage.replaceChildren(el('p',{text:'投稿已撤回，不会发布到网站。'}));}catch(e){fail(e);withdraw.disabled=false;}});stage.append(withdraw);}
-        return;
+        await renderMath(prose);return;
       }
       stage.append(el('h2',{text:view==='review'?'等待你审核的文章':admin?'全部投稿':'我的投稿'}));
       let page=1;const rows=el('div',{class:'submission-list'}),more=el('button',{class:'btn btn--ghost',type:'button',text:'加载更多'});stage.append(rows,more);
@@ -118,7 +118,7 @@ export async function renderWorkspace(container,params=new URLSearchParams()){
       const safeName=(file.name.slice(0,-ext.length-1).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'file')+'-'+crypto.randomUUID()+'.'+ext;
       const path=`assets/${image?'images':'files'}/uploads/${safeName}`;files.push({path,content,size:file.size});(image?post.images:post.attachments).push(image?{src:'/'+path,caption:file.name}:{file:'/'+path,title:file.name});
     }drawFiles();status.textContent='文件已加入本次稿件，提交时一起上传。';}catch(e){fail(e);}finally{fileInput.value='';upload.disabled=false;}});
-    previewButton.addEventListener('click',()=>{preview.hidden=!preview.hidden;body.hidden=!preview.hidden;previewButton.textContent=preview.hidden?'预览正文':'继续编辑';if(!preview.hidden)preview.replaceChildren(...[el('h1',{text:fields.title.value}),fields.subtitle.value.trim()?el('p',{class:'article__subtitle',text:fields.subtitle.value.trim()}):null,el('div',{html:renderMarkdown(fields.body.value).html})].filter(Boolean));});
+    previewButton.addEventListener('click',async()=>{preview.hidden=!preview.hidden;body.hidden=!preview.hidden;previewButton.textContent=preview.hidden?'预览正文':'继续编辑';if(!preview.hidden){preview.replaceChildren(...[el('h1',{text:fields.title.value}),fields.subtitle.value.trim()?el('p',{class:'article__subtitle',text:fields.subtitle.value.trim()}):null,el('div',{html:renderMarkdown(fields.body.value).html})].filter(Boolean));await renderMath(preview);}});
     const uploadProgress=el('progress',{class:'upload-progress',max:1,value:0,'aria-label':'稿件提交进度'});
     const uploadTitle=el('strong'),uploadMessage=el('p'),uploadLinks=el('div');
     const uploadFeedback=el('section',{class:'submission-feedback',role:'status','aria-live':'polite','aria-atomic':'true',hidden:true},[uploadTitle,uploadProgress,uploadMessage,uploadLinks]);

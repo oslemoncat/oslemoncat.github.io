@@ -1,41 +1,14 @@
 /* 文章详情页：正文渲染、数学公式、目录、上下篇和评论。 */
 import { el, resolveUrl, formatDate, formatTimestamp, latestDate, detectBase } from '../assets/js/util.js?v=20261015-protection';
 import { loadSite, loadArticles, loadArticleBody, findArticle } from '../assets/js/content.js?v=20261016-subtitles';
-import { renderMarkdown, typesetMath, buildToc } from '../assets/js/markdown.js?v=20261015-protection';
+import { renderMarkdown, renderMath, buildToc } from '../assets/js/markdown.js?v=20261022-math-preview';
 import { breadcrumbs, tagList, pager, emptyState } from '../assets/js/layout.js?v=20261016-subtitles';
 import { initAnchorScroll, initTocHighlight } from '../assets/js/toc.js?v=20261015-protection';
 import {api} from '../assets/js/auth.js?v=20261015-protection';
 
 import {createComments} from './comments.js?v=20261015-protection';
 
-import {createFilePreview} from '../assets/js/preview.js?v=20261015-protection';
-
-const KATEX_CSS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-const KATEX_JS = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
-
-let katexPromise = null;
-
-/** 动态加载 KaTeX（带超时）。失败时公式降级为源码显示，不影响正文。
- *  options.doc 可注入（测试用），options.enabled=false 时直接跳过加载。 */
-function ensureKatex(options = {}) {
-  const doc = options.doc || document;
-  if (options.enabled === false) return Promise.resolve(window.katex || null);
-  if (window.katex) return Promise.resolve(window.katex);
-  if (katexPromise) return katexPromise;
-
-  katexPromise = new Promise((resolve) => {
-    const finish = () => resolve(window.katex || null);
-    if (!doc.querySelector(`link[href="${KATEX_CSS}"]`)) {
-      doc.head.appendChild(el('link', { rel: 'stylesheet', href: KATEX_CSS }));
-    }
-    const script = el('script', { src: KATEX_JS, defer: true, onload: finish, onerror: finish });
-    setTimeout(finish, 6000);
-    doc.head.appendChild(script);
-    script.addEventListener('load', finish);
-    script.addEventListener('error', finish);
-  });
-  return katexPromise;
-}
+import {createFilePreview} from '../assets/js/preview.js?v=20261022-math-preview';
 
 function relativeTime(dateString) {
   if (!dateString) return '';
@@ -233,7 +206,6 @@ export async function renderArticle(container, slug, options = {}) {
   initAnchorScroll(container);
 
   // 数学渲染后再做目录高亮，避免布局抖动导致误判
-  await ensureKatex(options);
-  typesetMath(prose);
+  await renderMath(prose,options);
   initTocHighlight();
 }

@@ -348,11 +348,12 @@ function matches(node, selector) {
 }
 
 function queryAll(root, selector) {
+  const selectors = String(selector).split(',').map(part => part.trim());
   const results = [];
   const visit = (node) => {
     for (const child of node.childNodes) {
       if (child.nodeType !== 1) continue;
-      if (matches(child, selector)) results.push(child);
+      if (selectors.some(part => matches(child, part))) results.push(child);
       visit(child);
     }
   };

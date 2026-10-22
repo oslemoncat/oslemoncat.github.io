@@ -373,6 +373,31 @@ export function renderMarkdown(markdown) {
   return { html, headings: context.headings };
 }
 
+// Shared by reading, writing, review and Markdown attachment previews.
+const KATEX_CSS='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+const KATEX_JS='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
+let katexPromise=null;
+function ensureKatex(options={}){
+  if(window.katex?.render)return Promise.resolve();
+  if(katexPromise)return katexPromise;
+  const doc=options.doc||document;
+  katexPromise=new Promise(resolve=>{
+    const script=el('script',{src:KATEX_JS,defer:true});let done=false;
+    const finish=()=>{if(done)return;done=true;clearTimeout(timer);katexPromise=null;if(!window.katex?.render)script.remove();resolve();};
+    const timer=setTimeout(finish,6000);
+    script.addEventListener('load',finish);script.addEventListener('error',finish);
+    if(!doc.querySelector(`link[href="${KATEX_CSS}"]`))doc.head.appendChild(el('link',{rel:'stylesheet',href:KATEX_CSS}));
+    doc.head.appendChild(script);
+  });
+  return katexPromise;
+}
+export async function renderMath(root,options={}){
+  // Show readable source immediately, including during loading or offline use.
+  typesetMath(root);
+  if(options.enabled===false||window.katex?.render||!root.querySelectorAll('.math-inline, .math-display').length)return;
+  await ensureKatex(options);typesetMath(root);
+}
+
 /** 把 data-tex 占位元素交给 KaTeX 渲染；未加载 KaTeX 时降级为可读的公式源码。 */
 export function typesetMath(root) {
   const targets = root.querySelectorAll('.math-inline, .math-display');
@@ -391,6 +416,7 @@ export function typesetMath(root) {
           trust: false,
           macros: { '\\R': '\\mathbb{R}', '\\N': '\\mathbb{N}', '\\Q': '\\mathbb{Q}', '\\eps': '\\varepsilon' },
         });
+        node.classList.remove('math-error');
         return;
       } catch (error) {
         console.warn('[markdown] KaTeX 渲染失败：', tex, error);
