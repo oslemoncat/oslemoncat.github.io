@@ -2,6 +2,16 @@
   "version": 1,
   "items": [
     {
+      "id": "346ce52b-fca4-4a91-8220-0c831f4c63d0",
+      "slug": "mean-value-theorems-and-proofs",
+      "title": "中值定理及证明",
+      "authorId": "github:313387258",
+      "author": "oslemoncat",
+      "uploadedAt": "2026-10-22T04:46:43.747Z",
+      "publishedAt": "2026-10-22T04:46:44.392Z",
+      "updatedAt": "2026-10-22T04:46:44.392Z"
+    },
+    {
       "id": "6b14f34f-5eb4-4267-826c-23f40663c538",
       "slug": "daily",
       "title": "codex换源Deepseek问题解决",
